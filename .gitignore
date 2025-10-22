@@ -22,3 +22,10 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# Track AI configuration
+!CLAUDE.md
+!.github/copilot-instructions.md
+
+# Ignore local Claude configuration
+CLAUDE.local.md

@@ -73,6 +73,13 @@ This project is configured with AI development tools to enhance the development 
 - Accessibility best practices
 - Astro and React guidelines
 
+## AI Assistant Configuration
+
+- **Claude Code**: Uses `/CLAUDE.md` 
+- **GitHub Copilot**: Uses symlink at `/.github/copilot-instructions.md` → `/CLAUDE.md`
+
+To update AI rules, edit only the `/CLAUDE.md` file.
+
 ### Cursor IDE
 
 The project includes AI rules in `.cursor/rules/` directory that help Cursor IDE understand the project structure and provide better code suggestions.

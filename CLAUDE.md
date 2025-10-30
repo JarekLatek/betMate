@@ -61,11 +61,13 @@ Key architectural notes:
 ## Architecture Patterns
 
 ### Component Strategy
+
 - **Astro components (.astro)**: Use for static content and layouts
 - **React components**: Only when client-side interactivity is needed
 - Never use Next.js directives like "use client" (React runs within Astro)
 
 ### API Routes
+
 - Location: `src/pages/api/` (server-side only)
 - Use uppercase HTTP method handlers: `GET`, `POST`, etc.
 - Add `export const prerender = false` to all API routes
@@ -73,12 +75,14 @@ Key architectural notes:
 - Extract business logic to services in `src/lib/services`
 
 ### Supabase Integration
+
 - Access via `context.locals.supabase` in Astro routes (not direct imports)
 - Import `SupabaseClient` type from `src/db/supabase.client.ts` (not `@supabase/supabase-js`)
 - Store client setup and type definitions in `src/db/`
 - Use Zod schemas to validate data exchanged with backend
 
 ### Error Handling Pattern
+
 - Handle errors and edge cases at the beginning of functions
 - Use early returns for error conditions (avoid deeply nested if statements)
 - Place happy path last in the function

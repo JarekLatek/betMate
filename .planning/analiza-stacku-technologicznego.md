@@ -6,15 +6,18 @@ Frontend:
 - Tailwind 4
 - Shadcn/ui
 
-Backend i baza danych: 
+Backend i baza danych:
+
 - Supabase
 
 CI/CD i Hosting:
+
 - Github Actions
 - DigitalOcean
-</tech-stack>
+  </tech-stack>
 
 Dokonaj krytycznej lecz rzeczowej analizy czy <tech-stack> odpowiednio adresuje potrzeby [text](.ai/prd.md). Rozważ następujące pytania:
+
 1. Czy technologia pozwoli nam szybko dostarczyć MVP?
 2. Czy rozwiązanie będzie skalowalne w miarę wzrostu projektu?
 3. Czy koszt utrzymania i rozwoju będzie akceptowalny?

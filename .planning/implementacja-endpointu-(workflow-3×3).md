@@ -3,15 +3,15 @@ Twoim zadaniem jest wdrożenie endpointa interfejsu API REST w oparciu o podany 
 Najpierw dokładnie przejrzyj dostarczony plan wdrożenia:
 
 <implementation_plan>
-{{endpoint-implementation-plan}} <- dodaj referencję do planu implementacji endpointa (np. @generations-endpoint-implementation-plan.md)
+[text](../.ai/get-tournaments-id-leaderboard-implementation-plan.md)
 </implementation_plan>
 
 <types>
-{{types}} <- dodaj referencje do definicji typów (np. @types)
+src/types.ts
 </types>
 
 <implementation_rules>
-{{backend-rules}} <- dodaj referencje do reguł backendowych (np. @shared.mdc, @backend.mdc, @astro.mdc)
+[text](../CLAUDE.md)
 </implementation_rules>
 
 <implementation_approach>

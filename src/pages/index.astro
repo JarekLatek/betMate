@@ -1,8 +1,22 @@
 ---
-import Welcome from "../components/Welcome.astro";
 import Layout from "../layouts/Layout.astro";
+import { LogoutButton } from "@/components/auth/logout-button";
+
+// Redirect unauthenticated users to login page
+if (!Astro.locals.user) {
+  return Astro.redirect("/login");
+}
+
+// Get user info for display
+const username = Astro.locals.user.user_metadata?.username || Astro.locals.user.email;
 ---
 
-<Layout>
-  <Welcome />
+<Layout title="betMate - Strona główna">
+  <main class="flex min-h-screen flex-col items-center justify-center p-4">
+    <div class="text-center">
+      <h1 class="mb-4 text-4xl font-bold">Witaj, {username}!</h1>
+      <p class="text-muted-foreground mb-8 text-lg">Widok w budowie - In progress</p>
+      <LogoutButton client:load />
+    </div>
+  </main>
 </Layout>

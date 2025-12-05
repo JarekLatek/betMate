@@ -1,0 +1,17 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { AuthForm } from "@/components/auth/auth-form";
+
+export const prerender = false;
+
+// Redirect to home if user is already logged in
+if (Astro.locals.user) {
+  return Astro.redirect("/");
+}
+---
+
+<Layout title="Rejestracja - betMate">
+  <main class="flex min-h-screen items-center justify-center p-4">
+    <AuthForm client:load mode="register" />
+  </main>
+</Layout>

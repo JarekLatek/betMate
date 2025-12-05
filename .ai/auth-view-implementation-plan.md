@@ -2,7 +2,12 @@
 
 ## 1. Przegląd
 
-Widok uwierzytelniania składa się z dwóch stron: logowania i rejestracji. Jego celem jest umożliwienie użytkownikom uzyskania dostępu do aplikacji poprzez podanie danych uwierzytelniających lub utworzenie nowego konta. Widok wykorzystuje Supabase Auth do obsługi procesu po stronie klienta.
+Widok uwierzytelniania składa się z dwóch stron: logowania i rejestracji. Jego celem jest umożliwienie użytkownikom uzyskania dostępu do aplikacji poprzez podanie danych uwierzytelniających lub utworzenie nowego konta.
+
+Widok wykorzystuje Supabase Auth z pakietem `@supabase/ssr` do obsługi uwierzytelniania w środowisku SSR (Astro). Architektura wymaga dwóch osobnych klientów Supabase:
+
+- **Browser Client** - używany w komponentach React (client-side) do operacji auth
+- **Server Client** - używany w middleware i stronach Astro (server-side) do weryfikacji sesji
 
 ## 2. Routing widoku
 
@@ -13,12 +18,17 @@ Widok uwierzytelniania składa się z dwóch stron: logowania i rejestracji. Jeg
 
 ```
 src/
+├── db/
+│   ├── supabase.server.ts  # Server client (middleware, Astro pages)
+│   └── supabase.browser.ts # Browser client (React components)
+├── middleware/
+│   └── index.ts            # Weryfikacja sesji, ustawienie context.locals
 ├── pages/
-│   ├── login.astro        # Strona logowania (wrapper)
-│   └── register.astro     # Strona rejestracji (wrapper)
+│   ├── login.astro         # Strona logowania (wrapper)
+│   └── register.astro      # Strona rejestracji (wrapper)
 └── components/
     └── auth/
-        └── auth-form.tsx  # Główny komponent formularza (React)
+        └── auth-form.tsx   # Główny komponent formularza (React)
 ```
 
 ## 4. Szczegóły komponentów
@@ -91,17 +101,88 @@ Zarządzanie stanem odbywa się lokalnie w komponencie `AuthForm` przy użyciu:
 
 ## 7. Integracja API
 
-Integracja odbywa się bezpośrednio przez klienta Supabase (`src/db/supabase.client.ts`).
+Integracja wykorzystuje pakiet `@supabase/ssr` z dwoma osobnymi klientami dla prawidłowej synchronizacji sesji między client i server.
+
+### 7.1 Klienty Supabase
+
+**Browser Client (`src/db/supabase.browser.ts`):**
+
+- Używany w komponencie `AuthForm` (React, client-side)
+- Tworzony przez `createBrowserClient` z `@supabase/ssr`
+- Używa publicznych zmiennych: `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`
+- Automatycznie zarządza cookies sesji
+
+```typescript
+import { createBrowserClient } from "@supabase/ssr";
+import type { Database } from "./database.types";
+
+export const supabaseBrowser = createBrowserClient<Database>(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+);
+```
+
+**Server Client (`src/db/supabase.server.ts`):**
+
+- Używany w middleware i stronach Astro (server-side)
+- Tworzony per-request przez `createServerClient` z `@supabase/ssr`
+- Używa prywatnych zmiennych: `SUPABASE_URL`, `SUPABASE_KEY`
+- Wymaga przekazania `AstroCookies` dla dostępu do cookies
+
+```typescript
+import { createServerClient } from "@supabase/ssr";
+import type { AstroCookies } from "astro";
+import type { Database } from "./database.types";
+
+export function createSupabaseServerClient(cookies: AstroCookies) {
+  return createServerClient<Database>(
+    import.meta.env.SUPABASE_URL,
+    import.meta.env.SUPABASE_KEY,
+    {
+      cookies: {
+        get: (key) => cookies.get(key)?.value,
+        set: (key, value, options) => cookies.set(key, value, options),
+        remove: (key, options) => cookies.delete(key, options),
+      },
+    }
+  );
+}
+```
+
+### 7.2 Middleware
+
+Middleware (`src/middleware/index.ts`) weryfikuje sesję przy każdym request:
+
+```typescript
+import { defineMiddleware } from "astro:middleware";
+import { createSupabaseServerClient } from "@/db/supabase.server";
+
+export const onRequest = defineMiddleware(async (context, next) => {
+  context.locals.supabase = createSupabaseServerClient(context.cookies);
+
+  const {
+    data: { session },
+  } = await context.locals.supabase.auth.getSession();
+
+  context.locals.user = session?.user ?? null;
+
+  return next();
+});
+```
+
+### 7.3 Operacje Auth
 
 **Logowanie (`mode === 'login'`):**
 
+- **Klient**: `supabaseBrowser` (browser client)
 - **Metoda**: `supabase.auth.signInWithPassword`
 - **Parametry**: `{ email, password }`
-- **Sukces**: Przekierowanie na stronę główną `/`.
-- **Błąd**: Wyświetlenie komunikatu błędu.
+- **Sukces**: Przekierowanie na stronę główną `/`
+- **Błąd**: Wyświetlenie komunikatu błędu
 
 **Rejestracja (`mode === 'register'`):**
 
+- **Klient**: `supabaseBrowser` (browser client)
 - **Metoda**: `supabase.auth.signUp`
 - **Parametry**:
   ```typescript
@@ -115,8 +196,22 @@ Integracja odbywa się bezpośrednio przez klienta Supabase (`src/db/supabase.cl
     }
   }
   ```
-- **Sukces**: Przekierowanie na stronę główną `/` (lub informacja o konieczności potwierdzenia emaila, zależnie od konfiguracji Supabase).
-- **Błąd**: Wyświetlenie komunikatu błędu (np. użytkownik już istnieje).
+- **Sukces z sesją**: Przekierowanie na stronę główną `/`
+- **Sukces bez sesji**: Informacja o konieczności potwierdzenia emaila (jeśli włączone w Supabase)
+- **Błąd**: Wyświetlenie komunikatu błędu (np. użytkownik już istnieje)
+
+### 7.4 Zasady użycia klientów
+
+| Kontekst | Klient | Import |
+|----------|--------|--------|
+| Komponenty React | `supabaseBrowser` | `@/db/supabase.browser` |
+| Middleware | `createSupabaseServerClient()` | `@/db/supabase.server` |
+| Strony Astro (server) | `Astro.locals.supabase` | (z middleware) |
+| API Routes | `context.locals.supabase` | (z middleware) |
+
+**⚠️ WAŻNE:**
+- NIGDY nie importuj `supabase.browser.ts` w kodzie server-side
+- NIGDY nie importuj `supabase.server.ts` w komponencie React
 
 ## 8. Interakcje użytkownika
 
@@ -151,14 +246,34 @@ Integracja odbywa się bezpośrednio przez klienta Supabase (`src/db/supabase.cl
 
 ## 11. Kroki implementacji
 
-1. **Przygotowanie środowiska**: Upewnienie się, że `shadcn/ui` jest skonfigurowany i zainstalowane są komponenty `card`, `input`, `button`, `form`, `label`.
-2. **Definicja walidacji**: Utworzenie pliku `src/lib/validation/auth.validation.ts` ze schematami Zod dla logowania i rejestracji.
-3. **Implementacja komponentu `AuthForm`**:
+1. **Przygotowanie środowiska**:
+   - Upewnienie się, że `shadcn/ui` jest skonfigurowany i zainstalowane są komponenty `card`, `input`, `button`, `form`, `label`, `alert`.
+   - Instalacja pakietu `@supabase/ssr`: `npm install @supabase/ssr`
+
+2. **Konfiguracja klientów Supabase**:
+   - Utworzenie `src/db/supabase.server.ts` z funkcją `createSupabaseServerClient()`.
+   - Utworzenie/aktualizacja `src/db/supabase.browser.ts` z użyciem `createBrowserClient`.
+   - Usunięcie starego `src/db/supabase.client.ts` (jeśli istnieje).
+
+3. **Konfiguracja middleware**:
+   - Aktualizacja `src/middleware/index.ts` do tworzenia server client per-request.
+   - Weryfikacja sesji i ustawienie `context.locals.user`.
+
+4. **Definicja walidacji**: Utworzenie pliku `src/lib/validation/auth.validation.ts` ze schematami Zod dla logowania i rejestracji.
+
+5. **Implementacja komponentu `AuthForm`**:
    - Stworzenie szkieletu z `react-hook-form`.
    - Dodanie pól formularza z walidacją.
-   - Implementacja logiki `onSubmit` z obsługą `supabase.auth`.
+   - Implementacja logiki `onSubmit` z obsługą `supabaseBrowser.auth`.
    - Dodanie obsługi stanów ładowania i błędów.
-4. **Stworzenie stron Astro**:
-   - Utworzenie `src/pages/login.astro` importującego `AuthForm` z `mode="login"`.
-   - Utworzenie `src/pages/register.astro` importującego `AuthForm` z `mode="register"`.
-5. **Weryfikacja**: Przetestowanie procesu rejestracji i logowania, sprawdzenie przekierowań i obsługi błędów.
+   - Implementacja warunkowego przekierowania po rejestracji (z/bez email confirmation).
+
+6. **Stworzenie stron Astro**:
+   - Utworzenie `src/pages/login.astro` z `export const prerender = false` i `AuthForm` z `mode="login"`.
+   - Utworzenie `src/pages/register.astro` z `export const prerender = false` i `AuthForm` z `mode="register"`.
+   - Dodanie przekierowania zalogowanych użytkowników do `/`.
+
+7. **Weryfikacja**: Przetestowanie procesu rejestracji i logowania:
+   - Sprawdzenie czy middleware widzi zalogowanego użytkownika.
+   - Sprawdzenie czy sesja utrzymuje się między odświeżeniami.
+   - Sprawdzenie przekierowań i obsługi błędów.

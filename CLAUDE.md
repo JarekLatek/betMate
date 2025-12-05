@@ -76,10 +76,30 @@ Key architectural notes:
 
 ### Supabase Integration
 
-- Access via `context.locals.supabase` in Astro routes (not direct imports)
-- Import `SupabaseClient` type from `src/db/supabase.client.ts` (not `@supabase/supabase-js`)
+The project uses two Supabase clients with `@supabase/ssr` for proper cookie-based session management:
+
+**1. Server Client (`src/db/supabase.server.ts`)**
+- Used in: middleware, API routes, Astro page components (server-side)
+- Access via: `context.locals.supabase` or `Astro.locals.supabase`
+- Creates new client per-request for proper cookie handling
+- Uses: `SUPABASE_URL` + `SUPABASE_KEY`
+
+**2. Browser Client (`src/db/supabase.browser.ts`)**
+- Used in: React components (client-side)
+- Import: `import { supabaseBrowser } from '@/db/supabase.browser'`
+- Singleton that shares session via cookies
+- Uses: `PUBLIC_SUPABASE_URL` + `PUBLIC_SUPABASE_ANON_KEY`
+
+**Usage Rules:**
+- NEVER import `supabase.browser.ts` in server-side code
+- NEVER import `supabase.server.ts` in React components
+- In Astro components use `Astro.locals.supabase`
+- In React components use `supabaseBrowser`
+
+**Additional guidelines:**
 - Store client setup and type definitions in `src/db/`
 - Use Zod schemas to validate data exchanged with backend
+- Auth redirects use `window.location.href` (full page reload) for session sync
 
 ### Error Handling Pattern
 

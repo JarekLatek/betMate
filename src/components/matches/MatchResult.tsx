@@ -5,6 +5,8 @@ import type { MatchOutcome } from "@/types";
 interface MatchResultProps {
   userPrediction: MatchOutcome | null;
   actualResult: MatchOutcome | null;
+  homeScore: number | null;
+  awayScore: number | null;
 }
 
 function getResultLabel(result: MatchOutcome): string {
@@ -29,8 +31,9 @@ function getResultDescription(result: MatchOutcome): string {
   }
 }
 
-export function MatchResult({ userPrediction, actualResult }: MatchResultProps) {
+export function MatchResult({ userPrediction, actualResult, homeScore, awayScore }: MatchResultProps) {
   const hasResult = actualResult !== null;
+  const hasScore = homeScore !== null && awayScore !== null;
   const hasPrediction = userPrediction !== null;
   const isCorrect = hasPrediction && userPrediction === actualResult;
 
@@ -38,9 +41,15 @@ export function MatchResult({ userPrediction, actualResult }: MatchResultProps) 
     <div className="flex flex-col items-center gap-2">
       {hasResult ? (
         <div className="flex flex-col items-center gap-1">
-          <div className="bg-muted flex size-10 items-center justify-center rounded-full text-xl font-bold">
-            {getResultLabel(actualResult)}
-          </div>
+          {hasScore ? (
+            <div className="bg-muted flex items-center justify-center rounded-lg px-3 py-1.5 text-xl font-bold tabular-nums">
+              {homeScore} : {awayScore}
+            </div>
+          ) : (
+            <div className="bg-muted flex size-10 items-center justify-center rounded-full text-xl font-bold">
+              {getResultLabel(actualResult)}
+            </div>
+          )}
           <span className="text-muted-foreground text-xs">{getResultDescription(actualResult)}</span>
         </div>
       ) : (

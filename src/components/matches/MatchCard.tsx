@@ -118,7 +118,12 @@ export function MatchCard({ match, onBet, isLoading = false, loadingPrediction =
             <span>{match.status === "POSTPONED" ? "Mecz przełożony" : "Mecz odwołany"}</span>
           </div>
         ) : isFinished ? (
-          <MatchResult userPrediction={currentPrediction} actualResult={match.result ?? null} />
+          <MatchResult
+            userPrediction={currentPrediction}
+            actualResult={match.result ?? null}
+            homeScore={match.home_score ?? null}
+            awayScore={match.away_score ?? null}
+          />
         ) : (
           <BettingControls
             currentPrediction={currentPrediction}

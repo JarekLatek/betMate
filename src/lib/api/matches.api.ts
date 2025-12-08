@@ -67,7 +67,9 @@ export async function fetchMatches(params: FetchMatchesParams = {}): Promise<Pag
     searchParams.set("offset", params.offset.toString());
   }
 
-  const response = await fetch(`/api/matches?${searchParams.toString()}`);
+  const response = await fetch(`/api/matches?${searchParams.toString()}`, {
+    credentials: "same-origin",
+  });
 
   if (!response.ok) {
     const error = await response.json();
@@ -81,7 +83,9 @@ export async function fetchMatches(params: FetchMatchesParams = {}): Promise<Pag
  * Fetches all available tournaments from the API
  */
 export async function fetchTournaments(): Promise<TournamentDTO[]> {
-  const response = await fetch("/api/tournaments");
+  const response = await fetch("/api/tournaments", {
+    credentials: "same-origin",
+  });
 
   if (!response.ok) {
     const error = await response.json();
@@ -98,6 +102,7 @@ export async function fetchTournaments(): Promise<TournamentDTO[]> {
 export async function placeBet(command: CreateBetCommand): Promise<ApiResult<BetDTO>> {
   const response = await fetch("/api/bets", {
     method: "POST",
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
     },
@@ -122,6 +127,7 @@ export async function updateBet(
 ): Promise<ApiResult<BetDTO>> {
   const response = await fetch(`/api/bets/${betId}`, {
     method: "PUT",
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
     },

@@ -1,6 +1,9 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { MatchesView } from "@/components/matches/MatchesView";
+import { TournamentService } from "@/lib/services/tournament.service";
+import type { TournamentDTO } from "@/types";
 
 // Redirect unauthenticated users to login page
 if (!Astro.locals.user) {
@@ -9,14 +12,34 @@ if (!Astro.locals.user) {
 
 // Get user info for display
 const username = Astro.locals.user.user_metadata?.username || Astro.locals.user.email;
+
+// Fetch tournaments on the server
+let tournaments: TournamentDTO[] = [];
+try {
+  const tournamentService = new TournamentService(Astro.locals.supabase);
+  tournaments = await tournamentService.getAllTournaments();
+} catch (error) {
+  // eslint-disable-next-line no-console
+  console.error("Error fetching tournaments:", error);
+}
 ---
 
-<Layout title="betMate - Strona główna">
-  <main class="flex min-h-screen flex-col items-center justify-center p-4">
-    <div class="text-center">
-      <h1 class="mb-4 text-4xl font-bold">Witaj, {username}!</h1>
-      <p class="text-muted-foreground mb-8 text-lg">Widok w budowie - In progress</p>
-      <LogoutButton client:load />
+<Layout title="betMate - Mecze">
+  <div class="bg-background min-h-screen">
+    <!-- Top bar with user info -->
+    <div class="border-b">
+      <div class="container mx-auto flex items-center justify-between px-4 py-2">
+        <div class="flex items-center gap-2">
+          <span class="text-lg font-semibold">betMate</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-muted-foreground text-sm">{username}</span>
+          <LogoutButton client:load />
+        </div>
+      </div>
     </div>
-  </main>
+
+    <!-- Main matches view -->
+    <MatchesView client:load initialTournaments={tournaments} />
+  </div>
 </Layout>

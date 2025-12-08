@@ -6,13 +6,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Create a new Supabase client per-request with cookie access
   context.locals.supabase = createSupabaseServerClient(context.cookies);
 
-  // Get session from cookies
+  // Get authenticated user from Supabase Auth server
   const {
-    data: { session },
-  } = await context.locals.supabase.auth.getSession();
+    data: { user },
+  } = await context.locals.supabase.auth.getUser();
 
-  // Expose user data to context
-  context.locals.user = session?.user ?? null;
+  context.locals.user = user ?? null;
 
   return next();
 });

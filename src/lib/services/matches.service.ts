@@ -39,7 +39,14 @@ export class MatchesService {
       matchesQuery = matchesQuery.eq("tournament_id", query.tournament_id);
     }
 
-    if (query.status) {
+    // Handle filter parameter (UPCOMING = SCHEDULED + IN_PLAY, FINISHED = FINISHED only)
+    if (query.filter) {
+      if (query.filter === "UPCOMING") {
+        matchesQuery = matchesQuery.in("status", ["SCHEDULED", "IN_PLAY"]);
+      } else if (query.filter === "FINISHED") {
+        matchesQuery = matchesQuery.eq("status", "FINISHED");
+      }
+    } else if (query.status) {
       matchesQuery = matchesQuery.eq("status", query.status as Database["public"]["Enums"]["match_status"]);
     }
 
@@ -52,8 +59,11 @@ export class MatchesService {
     }
 
     // Apply ordering and pagination
+    // FINISHED matches: newest first (descending)
+    // UPCOMING/other: soonest first (ascending)
+    const isDescending = query.filter === "FINISHED" || query.status === "FINISHED";
     matchesQuery = matchesQuery
-      .order("match_datetime", { ascending: true })
+      .order("match_datetime", { ascending: !isDescending })
       .range(query.offset, query.offset + query.limit - 1);
 
     // Execute query

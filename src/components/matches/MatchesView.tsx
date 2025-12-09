@@ -147,16 +147,18 @@ export function MatchesView({ initialTournaments = [] }: MatchesViewProps) {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {matches.map((match) => (
-                  <MatchCard
-                    key={match.id}
-                    match={match}
-                    onBet={handleMatchBet}
-                    isLoading={loadingState.matchId === match.id}
-                    loadingPrediction={loadingState.matchId === match.id ? loadingState.prediction : null}
-                  />
-                ))}
+              <>
+                <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {matches.map((match) => (
+                    <MatchCard
+                      key={match.id}
+                      match={match}
+                      onBet={handleMatchBet}
+                      isLoading={loadingState.matchId === match.id}
+                      loadingPrediction={loadingState.matchId === match.id ? loadingState.prediction : null}
+                    />
+                  ))}
+                </div>
 
                 {/* Load more */}
                 {hasMore && (
@@ -173,7 +175,7 @@ export function MatchesView({ initialTournaments = [] }: MatchesViewProps) {
                     </Button>
                   </div>
                 )}
-              </div>
+              </>
             )}
           </>
         )}

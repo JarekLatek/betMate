@@ -11,6 +11,7 @@ export const getMatchesQuerySchema = z
   .object({
     tournament_id: z.coerce.number().int().positive().optional(),
     status: z.enum(matchStatusValues).optional(),
+    filter: z.enum(["UPCOMING", "FINISHED"]).optional(),
     from_date: z.string().datetime().optional(),
     to_date: z.string().datetime().optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50),

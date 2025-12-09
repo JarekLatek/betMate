@@ -3,7 +3,7 @@
  * Used in React components to communicate with the backend API
  */
 
-import type { MatchDTO, TournamentDTO, PaginatedResponseDTO, CreateBetCommand, BetDTO, MatchStatus } from "@/types";
+import type { MatchDTO, TournamentDTO, PaginatedResponseDTO, CreateBetCommand, BetDTO } from "@/types";
 
 /**
  * Filter type for match list (maps to API status parameter)
@@ -35,16 +35,6 @@ export interface ApiError {
 export type ApiResult<T> = { success: true; data: T } | { success: false; error: ApiError };
 
 /**
- * Maps frontend filter to API status parameter
- */
-function mapFilterToStatus(filter: MatchFilter): MatchStatus {
-  if (filter === "UPCOMING") {
-    return "SCHEDULED";
-  }
-  return "FINISHED";
-}
-
-/**
  * Fetches paginated list of matches from the API
  */
 export async function fetchMatches(params: FetchMatchesParams = {}): Promise<PaginatedResponseDTO<MatchDTO>> {
@@ -55,8 +45,7 @@ export async function fetchMatches(params: FetchMatchesParams = {}): Promise<Pag
   }
 
   if (params.filter) {
-    const status = mapFilterToStatus(params.filter);
-    searchParams.set("status", status);
+    searchParams.set("filter", params.filter);
   }
 
   if (params.limit) {

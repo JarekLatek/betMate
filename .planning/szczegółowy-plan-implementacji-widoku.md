@@ -10,157 +10,54 @@ Najpierw przejrzyj następujące informacje:
 2. Opis widoku:
    <view_description>
 
-   ### 2.2. Widok Meczów (Ekran Główny)
-   - **Ścieżka**: `/` (z opcjonalnym `?tournamentId=...`)
-   - **Główny cel**: Prezentacja listy meczów i umożliwienie obstawiania wyników.
-   - **Kluczowe informacje**:
-     - Lista meczów (Drużyny, Data/Godzina).
-     - Status meczu (Nadchodzący, Trwa, Zakończony).
-     - Aktualny typ użytkownika (1, X, 2).
-     - Wynik meczu (dla zakończonych).
-   - **Kluczowe komponenty**:
-     - `TournamentSelector` (w nagłówku).
-     - `MatchListFilters` (Segmented Control: Nadchodzące / Zakończone).
-     - `MatchCard` (z przyciskami do głosowania lub wynikiem).
-     - `InfiniteScrollTrigger` (do ładowania kolejnych stron).
-   - **UX/Dostępność**:
-     - Blokada przycisków na 5 min przed meczem (wizualne wyszarzenie + kłódka).
-     - Toast z informacją przy próbie edycji zablokowanego zakładu.
-     - Wyraźne rozróżnienie trafionych (zielony/szczęśliwa buźka) i nietrafionych (szary/smutna buźka) typów.
+   ### 2.6. Widok Moich Zakładów
+
+- **Ścieżka**: `/my-bets` (z opcjonalnym `?tournamentId=...`)
+- **Główny cel**: Przegląd historii typowań użytkownika oraz statystyk skuteczności.
+- **Kluczowe informacje**:
+  - Lista wszystkich zakładów użytkownika.
+  - Status zakładu (oczekujący, trafiony, pudło).
+  - Mecz powiązany z zakładem (drużyny, data, wynik).
+  - Statystyki skuteczności (trafienia, pudła, %).
+- **Kluczowe komponenty**:
+  - `BetList` (paginowana lista zakładów użytkownika).
+  - `BetFilters` (filtr po turnieju, statusie: wszystkie/oczekujące/rozstrzygnięte).
+  - `BetStats` (podsumowanie: liczba trafień, pudła, % skuteczności).
+  - `BetCard` (pojedynczy zakład z informacjami o meczu i wyniku).
+- **UX/Dostępność**:
+  - Kolorowe oznaczenie trafionych (zielony) i nietrafionych (szary/czerwony) zakładów.
+  - Możliwość usunięcia zakładu (tylko dla meczów, które jeszcze się nie rozpoczęły).
+  - Przycisk szybkiego przejścia do meczu w widoku głównym.
        </view_description>
 
 3. User Stories:
    <user_stories>
-   - ID: US-003
-
-   - Tytuł: Przeglądanie listy nadchodzących meczów
-   - Opis: Jako zalogowany użytkownik, chcę widzieć listę nadchodzących meczów w ramach wybranego turnieju, aby móc zdecydować, które z nich chcę obstawić.
-   - Kryteria akceptacji:
-     - System wyświetla listę meczów pobraną z `api-football.com`.
-     - Każdy element listy zawiera nazwy drużyn (i ich loga, jeśli dostępne), datę i godzinę rozpoczęcia meczu.
-     - Godzina meczu jest wyświetlana w lokalnej strefie czasowej użytkownika.
-     - Mecze, które już się rozpoczęły lub zakończyły, nie są widoczne na liście do obstawiania.
-
-- ID: US-004
-- Tytuł: Obstawianie wyniku meczu
-- Opis: Jako zalogowany użytkownik, chcę móc łatwo obstawić wynik (wygrana gospodarzy, remis, wygrana gości) dla wybranego meczu z listy.
-- Kryteria akceptacji:
-  - Przy każdym meczu na liście znajdują się trzy klikalne opcje: "1" (wygrana gospodarzy), "X" (remis), "2" (wygrana gości).
-  - Po wybraniu typu, system zapisuje go i wizualnie zaznacza wybór użytkownika.
-  - Użytkownik może postawić typ na dowolną liczbę dostępnych meczów.
-  - System uniemożliwia obstawienie meczu, do którego rozpoczęcia pozostało mniej niż 5 minut.
-
-- ID: US-005
-- Tytuł: Edycja postawionego typu
-- Opis: Jako zalogowany użytkownik, chcę mieć możliwość zmiany mojego typu przed rozpoczęciem meczu, jeśli zmienię zdanie.
-- Kryteria akceptacji:
-  - Użytkownik może zmienić swój wybór (1, X, 2) dla danego meczu w dowolnym momencie.
-  - Zmiana typu jest możliwa do 5 minut przed oficjalnym rozpoczęciem meczu.
-  - Po upływie tego czasu opcja edycji jest blokowana.
-
-- ID: US-007
-  - Tytuł: Przełączanie się między turniejami
-  - Opis: Jako użytkownik, chcę móc łatwo przełączać się między dostępnymi turniejami (Liga Mistrzów, MŚ 2026), aby zobaczyć listę meczów i oddzielny ranking dla każdego z nich.
-  - Kryteria akceptacji:
-    - W interfejsie znajduje się wyraźny przełącznik (np. zakładki, menu rozwijane) do wyboru turnieju.
-    - Po wybraniu turnieju, zarówno lista meczów do obstawienia, jak i ranking, są aktualizowane i pokazują dane tylko dla tego turnieju.
-
-    - ID: US-010
-    - Tytuł: Obsługa meczów odwołanych lub przełożonych
-    - Opis: Jako system, chcę poprawnie obsługiwać mecze, które zostały odwołane lub przełożone, aby nie wpływały one na punktację.
+   - ID: US-011
+    - Tytuł: Przeglądanie historii własnych zakładów
+    - Opis: Jako zalogowany użytkownik, chcę mieć dostęp do pełnej historii moich typów wraz ze statystykami skuteczności, aby móc analizować swoje wyniki i śledzić postępy.
     - Kryteria akceptacji:
-      - Jeśli mecz zostanie oznaczony w API jako odwołany lub przełożony, wszystkie postawione na niego zakłady są anulowane.
-      - Za anulowane zakłady nie są przyznawane ani odejmowane żadne punkty.
-      - Taki mecz nie jest brany pod uwagę przy obliczaniu statystyk trafień.
+      - Użytkownik może przejść do widoku "Moje Typy" z głównej nawigacji.
+      - Widok wyświetla listę wszystkich zakładów użytkownika z informacjami o meczu (drużyny, data, wynik).
+      - Każdy zakład ma oznaczony status: oczekujący (mecz nie rozegrany), trafiony (zielony), pudło (szary/czerwony).
+      - Użytkownik może filtrować zakłady po turnieju oraz statusie (wszystkie/oczekujące/rozstrzygnięte).
+      - Widok zawiera podsumowanie statystyk: liczba trafień, liczba pudel, procent skuteczności.
+      - Użytkownik może usunąć zakład tylko dla meczów, które jeszcze się nie rozpoczęły (więcej niż 5 minut do rozpoczęcia).
         </user_stories>
 
 4. Endpoint Description:
    <endpoint_description>
+### 2.4 Bets
 
-   ### 2.2 Tournaments
+#### GET /api/me/bets
 
-   #### GET /api/tournaments
-
-   **Description:** Retrieve list of all available tournaments.
-
-   **Authentication:** Required
-
-   **Query Parameters:** None
-
-   **Response Body:**
-
-   ```json
-   {
-     "data": [
-       {
-         "id": 1,
-         "name": "UEFA Champions League",
-         "api_tournament_id": 2
-       },
-       {
-         "id": 2,
-         "name": "FIFA World Cup 2026",
-         "api_tournament_id": 1
-       }
-     ]
-   }
-   ```
-
-   **Success Response:**
-   - **Code:** 200 OK
-
-   **Error Responses:**
-   - **Code:** 401 Unauthorized
-     - **Message:** `{ "error": "Authentication required" }`
-
-   ***
-
-   #### GET /api/tournaments/:id
-
-   **Description:** Get details of a specific tournament.
-
-   **Authentication:** Required
-
-   **URL Parameters:**
-   - `id` (required): Tournament ID
-
-   **Response Body:**
-
-   ```json
-   {
-     "data": {
-       "id": 1,
-       "name": "UEFA Champions League",
-       "api_tournament_id": 2
-     }
-   }
-   ```
-
-   **Success Response:**
-   - **Code:** 200 OK
-
-   **Error Responses:**
-   - **Code:** 401 Unauthorized
-     - **Message:** `{ "error": "Authentication required" }`
-   - **Code:** 404 Not Found
-     - **Message:** `{ "error": "Tournament not found" }`
-
-   ***
-
-   ### 2.3 Matches
-
-#### GET /api/matches
-
-**Description:** Retrieve list of matches with optional filtering.
+**Description:** Retrieve all bets for the authenticated user.
 
 **Authentication:** Required
 
 **Query Parameters:**
 
-- `tournament_id` (optional): Filter by tournament ID
-- `status` (optional): Filter by match status (`SCHEDULED`, `IN_PLAY`, `FINISHED`, `POSTPONED`, `CANCELED`)
-- `from_date` (optional): Filter matches after this date (ISO 8601 format)
-- `to_date` (optional): Filter matches before this date (ISO 8601 format)
+- `tournament_id` (optional): Filter bets by tournament
+- `match_id` (optional): Filter bet for specific match
 - `limit` (optional): Number of results per page (default: 50, max: 100)
 - `offset` (optional): Pagination offset (default: 0)
 
@@ -170,43 +67,31 @@ Najpierw przejrzyj następujące informacje:
 {
   "data": [
     {
-      "id": 101,
-      "tournament_id": 1,
-      "home_team": "Real Madrid",
-      "away_team": "Barcelona",
-      "match_datetime": "2025-11-15T20:00:00Z",
-      "status": "SCHEDULED",
-      "result": null,
-      "api_match_id": 12345,
-      "user_bet": null
-    },
-    {
-      "id": 102,
-      "tournament_id": 1,
-      "home_team": "Bayern Munich",
-      "away_team": "Manchester City",
-      "match_datetime": "2025-11-16T19:45:00Z",
-      "status": "SCHEDULED",
-      "result": null,
-      "api_match_id": 12346,
-      "user_bet": {
-        "id": 501,
-        "picked_result": "HOME_WIN",
-        "created_at": "2025-11-10T14:30:00Z",
-        "updated_at": null
+      "id": 501,
+      "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "match_id": 101,
+      "picked_result": "HOME_WIN",
+      "created_at": "2025-11-10T14:30:00Z",
+      "updated_at": null,
+      "match": {
+        "id": 101,
+        "tournament_id": 1,
+        "home_team": "Real Madrid",
+        "away_team": "Barcelona",
+        "match_datetime": "2025-11-15T20:00:00Z",
+        "status": "SCHEDULED",
+        "result": null
       }
     }
   ],
   "pagination": {
-    "total": 150,
+    "total": 25,
     "limit": 50,
     "offset": 0,
-    "has_more": true
+    "has_more": false
   }
 }
 ```
-
-**Note:** The `user_bet` field is included when the authenticated user has placed a bet on that match.
 
 **Success Response:**
 
@@ -216,42 +101,101 @@ Najpierw przejrzyj następujące informacje:
 
 - **Code:** 401 Unauthorized
   - **Message:** `{ "error": "Authentication required" }`
-- **Code:** 400 Bad Request
-  - **Message:** `{ "error": "Invalid query parameters", "details": [...] }`
 
 ---
 
-#### GET /api/matches/:id
+#### POST /api/bets
 
-**Description:** Get details of a specific match including the authenticated user's bet if exists.
+**Description:** Create a new bet for a match. Only one bet per user per match is allowed.
 
 **Authentication:** Required
 
-**URL Parameters:**
+**Request Body:**
 
-- `id` (required): Match ID
+```json
+{
+  "match_id": 101,
+  "picked_result": "HOME_WIN"
+}
+```
+
+**Validation Rules:**
+
+- `match_id`: Required, must reference an existing match
+- `picked_result`: Required, must be one of: `HOME_WIN`, `DRAW`, `AWAY_WIN`
+- Match must have status `SCHEDULED`
+- Match must start more than 5 minutes from now
+- User cannot already have a bet on this match
 
 **Response Body:**
 
 ```json
 {
   "data": {
-    "id": 101,
-    "tournament_id": 1,
-    "home_team": "Real Madrid",
-    "away_team": "Barcelona",
-    "match_datetime": "2025-11-15T20:00:00Z",
-    "status": "SCHEDULED",
-    "result": null,
-    "api_match_id": 12345,
-    "can_bet": true,
-    "betting_closes_at": "2025-11-15T19:55:00Z",
-    "user_bet": {
-      "id": 501,
-      "picked_result": "HOME_WIN",
-      "created_at": "2025-11-10T14:30:00Z",
-      "updated_at": null
-    }
+    "id": 501,
+    "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "match_id": 101,
+    "picked_result": "HOME_WIN",
+    "created_at": "2025-11-10T14:30:00Z",
+    "updated_at": null
+  }
+}
+```
+
+**Success Response:**
+
+- **Code:** 201 Created
+  - **Headers:** `Location: /api/bets/501`
+
+**Error Responses:**
+
+- **Code:** 401 Unauthorized
+  - **Message:** `{ "error": "Authentication required" }`
+- **Code:** 400 Bad Request
+  - **Message:** `{ "error": "Invalid request body", "details": [...] }`
+- **Code:** 403 Forbidden
+  - **Message:** `{ "error": "Cannot bet on this match", "reason": "Match starts in less than 5 minutes" }`
+- **Code:** 409 Conflict
+  - **Message:** `{ "error": "Bet already exists for this match" }`
+
+---
+
+#### PUT /api/bets/:id
+
+**Description:** Update an existing bet. Only allowed if match hasn't started and is more than 5 minutes away.
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `id` (required): Bet ID
+
+**Request Body:**
+
+```json
+{
+  "picked_result": "DRAW"
+}
+```
+
+**Validation Rules:**
+
+- `picked_result`: Required, must be one of: `HOME_WIN`, `DRAW`, `AWAY_WIN`
+- Bet must belong to authenticated user
+- Associated match must have status `SCHEDULED`
+- Associated match must start more than 5 minutes from now
+
+**Response Body:**
+
+```json
+{
+  "data": {
+    "id": 501,
+    "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "match_id": 101,
+    "picked_result": "DRAW",
+    "created_at": "2025-11-10T14:30:00Z",
+    "updated_at": "2025-11-11T10:15:00Z"
   }
 }
 ```
@@ -264,19 +208,57 @@ Najpierw przejrzyj następujące informacje:
 
 - **Code:** 401 Unauthorized
   - **Message:** `{ "error": "Authentication required" }`
+- **Code:** 403 Forbidden
+  - **Message:** `{ "error": "Cannot modify this bet", "reason": "Match starts in less than 5 minutes" }`
 - **Code:** 404 Not Found
-  - **Message:** `{ "error": "Match not found" }`
+  - **Message:** `{ "error": "Bet not found" }`
 
 ---
 
+#### DELETE /api/bets/:id
+
+**Description:** Delete an existing bet. Only allowed if match hasn't started and is more than 5 minutes away.
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `id` (required): Bet ID
+
+**Validation Rules:**
+
+- Bet must belong to authenticated user
+- Associated match must have status `SCHEDULED`
+- Associated match must start more than 5 minutes from now
+
+**Response Body:**
+
+```json
+{
+  "message": "Bet deleted successfully"
+}
+```
+
+**Success Response:**
+
+- **Code:** 200 OK
+
+**Error Responses:**
+
+- **Code:** 401 Unauthorized
+  - **Message:** `{ "error": "Authentication required" }`
+- **Code:** 403 Forbidden
+  - **Message:** `{ "error": "Cannot delete this bet", "reason": "Match starts in less than 5 minutes" }`
+- **Code:** 404 Not Found
+  - **Message:** `{ "error": "Bet not found" }`
+
+---
 </endpoint_description>
 
 5. Endpoint Implementation:
    <endpoint_implementation>
-   - [text](../.ai/get-matches-implementation-plan.md)
-   - [text](../.ai/get-tournaments-implementation-plan.md)
-   - [text](../.ai/put-bets-id-implementation-plan.md)
-   - [text](../.ai/post-api-bets-implementation-plan.md)
+   - [text](../.ai/get-me-bets-implementation-plan.md)
+  - [text](../.ai/put-bets-id-implementation-plan.md)
      </endpoint_implementation>
 
 6. Type Definitions:

@@ -119,6 +119,17 @@ Następujące funkcjonalności nie wchodzą w zakres wersji MVP, aby zapewnić s
   - Za anulowane zakłady nie są przyznawane ani odejmowane żadne punkty.
   - Taki mecz nie jest brany pod uwagę przy obliczaniu statystyk trafień.
 
+- ID: US-011
+- Tytuł: Przeglądanie historii własnych zakładów
+- Opis: Jako zalogowany użytkownik, chcę mieć dostęp do pełnej historii moich typów wraz ze statystykami skuteczności, aby móc analizować swoje wyniki i śledzić postępy.
+- Kryteria akceptacji:
+  - Użytkownik może przejść do widoku "Moje Typy" z głównej nawigacji.
+  - Widok wyświetla listę wszystkich zakładów użytkownika z informacjami o meczu (drużyny, data, wynik).
+  - Każdy zakład ma oznaczony status: oczekujący (mecz nie rozegrany), trafiony (zielony), pudło (szary/czerwony).
+  - Użytkownik może filtrować zakłady po turnieju oraz statusie (wszystkie/oczekujące/rozstrzygnięte).
+  - Widok zawiera podsumowanie statystyk: liczba trafień, liczba pudel, procent skuteczności.
+  - Użytkownik może usunąć zakład tylko dla meczów, które jeszcze się nie rozpoczęły (więcej niż 5 minut do rozpoczęcia).
+
 ## 6. Metryki sukcesu
 
 Kluczowe wskaźniki (KPIs) oraz kryteria, które pozwolą ocenić powodzenie produktu w wersji MVP:

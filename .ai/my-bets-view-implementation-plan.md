@@ -25,15 +25,16 @@ MyBetsPage (Astro)
     ├── BetStats
     │   └── StatCard (x3: trafienia, pudła, skuteczność)
     ├── BetFilters
-    │   ├── TournamentSelect
+    │   ├── TournamentSelector (reużyty z src/components/matches/)
     │   └── StatusSelect
     ├── BetList
     │   ├── BetCard (x n)
     │   │   ├── MatchInfo
     │   │   ├── BetOutcome
     │   │   └── DeleteBetButton (conditional)
-    │   └── EmptyState (conditional)
-    └── Pagination
+    │   ├── EmptyState (conditional)
+    │   └── LoadMoreButton (conditional)
+    └── LoadingState (conditional)
 ```
 
 ## 4. Szczegóły komponentów
@@ -49,21 +50,20 @@ MyBetsPage (Astro)
 
 ### MyBetsView
 
-- **Opis**: Główny komponent React zarządzający stanem widoku i orkiestrujący komunikację między komponentami dziećmi. Odpowiada za pobieranie danych, zarządzanie filtrami i paginacją.
+- **Opis**: Główny komponent React zarządzający stanem widoku i orkiestrujący komunikację między komponentami dziećmi. Odpowiada za pobieranie danych, zarządzanie filtrami i ładowanie kolejnych stron (Load More).
 - **Główne elementy**:
   - `<div className="container">` - główny kontener
   - `<BetStats />` - sekcja statystyk
   - `<BetFilters />` - sekcja filtrów
-  - `<BetList />` - lista zakładów
-  - `<Pagination />` - kontrolki paginacji
+  - `<BetList />` - lista zakładów z EmptyState i LoadMoreButton
 - **Obsługiwane interakcje**:
   - Zmiana filtrów (turniej, status)
-  - Zmiana strony paginacji
+  - Ładowanie kolejnych zakładów (Load More)
   - Usunięcie zakładu (propagowane z BetCard)
 - **Obsługiwana walidacja**: Brak (delegowana do komponentów dzieci i API)
-- **Typy**: `MyBetsViewModel`, `BetFilterState`, `PaginationState`
+- **Typy**: `MyBetsViewModel`, `BetFilterState`
 - **Propsy**:
-  - `initialTournamentId?: number` - początkowy filtr turnieju z URL
+  - `initialTournamentId?: number | null` - początkowy filtr turnieju z URL (null = wszystkie)
   - `initialStatus?: BetStatusFilter` - początkowy filtr statusu z URL
 
 ### BetStats
@@ -99,10 +99,10 @@ MyBetsPage (Astro)
 - **Opis**: Komponent z kontrolkami filtrowania zakładów. Zawiera dropdown do wyboru turnieju i statusu zakładu.
 - **Główne elementy**:
   - `<div className="flex gap-4">` - kontener flex
-  - `<TournamentSelect />` - select turnieju
+  - `<TournamentSelector />` - istniejący komponent z `src/components/matches/`
   - `<StatusSelect />` - select statusu
 - **Obsługiwane interakcje**:
-  - `onTournamentChange(tournamentId: number | undefined)` - zmiana turnieju
+  - `onTournamentChange(tournamentId: number | null)` - zmiana turnieju
   - `onStatusChange(status: BetStatusFilter)` - zmiana statusu
 - **Obsługiwana walidacja**: Brak (wartości z predefiniowanych list)
 - **Typy**: `BetFilterState`, `TournamentDTO[]`
@@ -112,22 +112,16 @@ MyBetsPage (Astro)
   - `onFiltersChange: (filters: BetFilterState) => void` - callback zmiany filtrów
   - `isLoading?: boolean` - stan ładowania
 
-### TournamentSelect
+### TournamentSelector (istniejący komponent)
 
-- **Opis**: Dropdown (Select z Shadcn/ui) do wyboru turnieju.
-- **Główne elementy**:
-  - `<Select>` (Shadcn/ui)
-  - `<SelectTrigger>`
-  - `<SelectContent>` z `<SelectItem>` dla każdego turnieju
-- **Obsługiwane interakcje**:
-  - `onChange(value: string)` - wybór turnieju
-- **Obsługiwana walidacja**: Brak
-- **Typy**: `TournamentDTO`
-- **Propsy**:
+- **Lokalizacja**: `src/components/matches/TournamentSelector.tsx`
+- **Opis**: Istniejący dropdown do wyboru turnieju. Komponent jest już zaimplementowany i będzie reużyty bez modyfikacji.
+- **Istniejące propsy**:
   - `tournaments: TournamentDTO[]` - lista turniejów
-  - `value: number | undefined` - wybrany turniej
-  - `onChange: (tournamentId: number | undefined) => void` - callback
+  - `selectedId: number | null` - wybrany turniej
+  - `onSelect: (id: number) => void` - callback wyboru
   - `disabled?: boolean`
+- **Uwaga**: Komponent nie obsługuje opcji "Wszystkie turnieje" (wartość `null` oznacza brak wyboru). Jeśli potrzebna opcja "Wszystkie", należy rozszerzyć komponent o dodatkowy `SelectItem`.
 
 ### StatusSelect
 
@@ -147,18 +141,23 @@ MyBetsPage (Astro)
 
 ### BetList
 
-- **Opis**: Kontener na listę zakładów użytkownika. Wyświetla karty zakładów lub stan pusty jeśli brak wyników.
+- **Opis**: Kontener na listę zakładów użytkownika. Wyświetla karty zakładów, stan pusty jeśli brak wyników, oraz przycisk "Załaduj więcej".
 - **Główne elementy**:
   - `<div className="space-y-4">` - kontener z odstępami
   - `<BetCard />` x n lub `<EmptyState />`
+  - `<LoadMoreButton />` - przycisk ładowania kolejnych (gdy `hasMore`)
 - **Obsługiwane interakcje**:
   - Propagacja `onDeleteBet` z BetCard do rodzica
+  - Propagacja `onLoadMore` z LoadMoreButton do rodzica
 - **Obsługiwana walidacja**: Brak
-- **Typy**: `BetWithMatchDTO[]`
+- **Typy**: `BetWithDisplayStatus[]`
 - **Propsy**:
-  - `bets: BetWithMatchDTO[]` - lista zakładów do wyświetlenia
+  - `bets: BetWithDisplayStatus[]` - lista zakładów do wyświetlenia
   - `onDeleteBet: (betId: number) => void` - callback usunięcia zakładu
-  - `isLoading?: boolean` - stan ładowania
+  - `onLoadMore: () => void` - callback ładowania kolejnych
+  - `isLoading?: boolean` - stan ładowania początkowego
+  - `isLoadingMore?: boolean` - stan ładowania kolejnych
+  - `hasMore: boolean` - czy są kolejne strony
   - `deletingBetId?: number | null` - ID zakładu w trakcie usuwania
 
 ### BetCard
@@ -168,16 +167,16 @@ MyBetsPage (Astro)
   - `<Card>` (Shadcn/ui) z dynamicznym border-color w zależności od statusu
   - `<MatchInfo />` - informacje o meczu (drużyny, data, wynik)
   - `<BetOutcome />` - wytypowany wynik z oznaczeniem trafienia/pudła
-  - `<DeleteBetButton />` - przycisk usunięcia (warunkowo)
+  - `<DeleteBetButton />` - przycisk usunięcia (warunkowo, gdy `canDelete === true`)
   - `<Link>` - link do widoku meczu
 - **Obsługiwane interakcje**:
   - `onClick` na link do meczu - nawigacja do `/matches/:id`
   - `onDelete` - usunięcie zakładu
 - **Obsługiwana walidacja**:
-  - Przycisk usunięcia widoczny tylko gdy: `match.status === 'SCHEDULED'` i `match.match_datetime > now + 5 minut`
-- **Typy**: `BetWithMatchDTO`, `BetDisplayStatus`
+  - Przycisk usunięcia widoczny tylko gdy: `bet.canDelete === true` (obliczone w hooku)
+- **Typy**: `BetWithDisplayStatus`
 - **Propsy**:
-  - `bet: BetWithMatchDTO` - dane zakładu z meczem
+  - `bet: BetWithDisplayStatus` - dane zakładu z meczem i obliczonym statusem
   - `onDelete: (betId: number) => void` - callback usunięcia
   - `isDeleting?: boolean` - czy zakład jest w trakcie usuwania
 
@@ -239,23 +238,22 @@ MyBetsPage (Astro)
 - **Propsy**:
   - `hasFilters: boolean` - czy są aktywne filtry (zmienia komunikat)
 
-### Pagination
+### LoadMoreButton
 
-- **Opis**: Kontrolki paginacji dla listy zakładów.
+- **Opis**: Przycisk do ładowania kolejnych zakładów (infinite scroll pattern). Spójny z wzorcem używanym w `MatchesView`.
 - **Główne elementy**:
-  - `<Button>` - poprzednia strona
-  - `<span>` - informacja o aktualnej stronie
-  - `<Button>` - następna strona
+  - `<Button variant="outline">` (Shadcn/ui)
+  - Ikona ładowania (Loader2) gdy `isLoading`
 - **Obsługiwane interakcje**:
-  - `onPageChange(page: number)` - zmiana strony
+  - `onClick` - załadowanie następnej strony zakładów
 - **Obsługiwana walidacja**:
-  - Przycisk "Poprzednia" disabled gdy `offset === 0`
-  - Przycisk "Następna" disabled gdy `!has_more`
-- **Typy**: `PaginationDTO`
+  - Przycisk widoczny tylko gdy `has_more === true`
+  - Przycisk disabled gdy `isLoading === true`
+- **Typy**: Brak
 - **Propsy**:
-  - `pagination: PaginationDTO` - metadane paginacji
-  - `onPageChange: (page: number) => void` - callback zmiany strony
-  - `disabled?: boolean`
+  - `onLoadMore: () => void` - callback ładowania kolejnych
+  - `isLoading?: boolean` - stan ładowania
+  - `hasMore: boolean` - czy są kolejne strony
 
 ## 5. Typy
 
@@ -310,14 +308,8 @@ type BetStatusFilter = "all" | "pending" | "resolved";
 
 // Stan filtrów
 interface BetFilterState {
-  tournamentId: number | undefined;
+  tournamentId: number | null; // null = wszystkie turnieje (spójne z TournamentSelector)
   status: BetStatusFilter;
-}
-
-// Stan paginacji
-interface PaginationState {
-  offset: number;
-  limit: number;
 }
 
 // Statystyki zakładów
@@ -332,11 +324,12 @@ interface BetStatsData {
 // Stan widoku
 interface MyBetsViewModel {
   bets: BetWithMatchDTO[];
-  pagination: PaginationDTO;
   stats: BetStatsData;
   filters: BetFilterState;
   isLoading: boolean;
+  isLoadingMore: boolean; // dla Load More
   error: string | null;
+  hasMore: boolean;
   deletingBetId: number | null;
 }
 
@@ -349,7 +342,41 @@ interface BetWithDisplayStatus extends BetWithMatchDTO {
 
 ### Funkcje pomocnicze dla typów
 
+**Uwaga**: Funkcje `getResultLabel()` i `getResultDescription()` istnieją już w `src/components/matches/MatchResult.tsx`. Należy je wyekstrahować do współdzielonego modułu `src/lib/utils/bet-utils.ts` i reużyć w obu komponentach.
+
 ```typescript
+// ============================================================================
+// Funkcje do ekstrakcji z MatchResult.tsx -> src/lib/utils/bet-utils.ts
+// ============================================================================
+
+// Mapowanie wyniku na etykietę (1/X/2)
+function getResultLabel(result: MatchOutcome): string {
+  switch (result) {
+    case "HOME_WIN":
+      return "1";
+    case "DRAW":
+      return "X";
+    case "AWAY_WIN":
+      return "2";
+  }
+}
+
+// Mapowanie wyniku na opis
+function getResultDescription(result: MatchOutcome): string {
+  switch (result) {
+    case "HOME_WIN":
+      return "Wygrana gospodarzy";
+    case "DRAW":
+      return "Remis";
+    case "AWAY_WIN":
+      return "Wygrana gości";
+  }
+}
+
+// ============================================================================
+// Nowe funkcje dla widoku Moje Zakłady
+// ============================================================================
+
 // Obliczanie statusu zakładu do wyświetlenia
 function getBetDisplayStatus(bet: BetWithMatchDTO): BetDisplayStatus {
   const match = bet.match;
@@ -410,25 +437,29 @@ function calculateBetStats(bets: BetWithMatchDTO[]): BetStatsData {
 
 ### Custom Hook: `useMyBets`
 
+Hook wzorowany na istniejącym `useMatches` z `src/components/hooks/useMatches.ts`. Używa wzorca "Load More" (infinite scroll) zamiast klasycznej paginacji.
+
 ```typescript
 interface UseMyBetsOptions {
-  initialTournamentId?: number;
+  initialTournamentId?: number | null;
   initialStatus?: BetStatusFilter;
+  limit?: number; // domyślnie 20
 }
 
 interface UseMyBetsReturn {
   // Stan
   bets: BetWithDisplayStatus[];
-  pagination: PaginationDTO;
   stats: BetStatsData;
   filters: BetFilterState;
-  isLoading: boolean;
+  isLoading: boolean;        // pierwsze ładowanie
+  isLoadingMore: boolean;    // ładowanie kolejnych (Load More)
   error: string | null;
+  hasMore: boolean;
   deletingBetId: number | null;
 
   // Akcje
   setFilters: (filters: Partial<BetFilterState>) => void;
-  setPage: (page: number) => void;
+  loadMore: () => Promise<void>;
   deleteBet: (betId: number) => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -438,33 +469,31 @@ interface UseMyBetsReturn {
 
 ```typescript
 function useMyBets(options: UseMyBetsOptions = {}): UseMyBetsReturn {
+  const limit = options.limit ?? 20;
+
   const [bets, setBets] = useState<BetWithMatchDTO[]>([]);
-  const [pagination, setPagination] = useState<PaginationDTO>({
-    total: 0,
-    limit: 20,
-    offset: 0,
-    has_more: false,
-  });
   const [filters, setFiltersState] = useState<BetFilterState>({
-    tournamentId: options.initialTournamentId,
+    tournamentId: options.initialTournamentId ?? null,
     status: options.initialStatus ?? "all",
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [deletingBetId, setDeletingBetId] = useState<number | null>(null);
 
-  // Pobieranie danych
+  // Pobieranie danych (początkowe lub po zmianie filtrów)
   const fetchBets = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
       const params = new URLSearchParams();
-      if (filters.tournamentId) {
+      if (filters.tournamentId !== null) {
         params.set("tournament_id", filters.tournamentId.toString());
       }
-      params.set("limit", pagination.limit.toString());
-      params.set("offset", pagination.offset.toString());
+      params.set("limit", limit.toString());
+      params.set("offset", "0");
 
       const response = await fetch(`/api/me/bets?${params}`);
 
@@ -474,15 +503,46 @@ function useMyBets(options: UseMyBetsOptions = {}): UseMyBetsReturn {
 
       const data: PaginatedResponseDTO<BetWithMatchDTO> = await response.json();
       setBets(data.data);
-      setPagination(data.pagination);
+      setHasMore(data.pagination.has_more);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }
-  }, [filters.tournamentId, pagination.limit, pagination.offset]);
+  }, [filters.tournamentId, limit]);
 
-  // Efekt pobierania danych przy zmianie filtrów/paginacji
+  // Ładowanie kolejnych (Load More)
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+
+    setIsLoadingMore(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      if (filters.tournamentId !== null) {
+        params.set("tournament_id", filters.tournamentId.toString());
+      }
+      params.set("limit", limit.toString());
+      params.set("offset", bets.length.toString());
+
+      const response = await fetch(`/api/me/bets?${params}`);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch more bets");
+      }
+
+      const data: PaginatedResponseDTO<BetWithMatchDTO> = await response.json();
+      setBets((prev) => [...prev, ...data.data]);
+      setHasMore(data.pagination.has_more);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [filters.tournamentId, limit, bets.length, isLoadingMore, hasMore]);
+
+  // Efekt pobierania danych przy zmianie filtrów
   useEffect(() => {
     fetchBets();
   }, [fetchBets]);
@@ -508,20 +568,13 @@ function useMyBets(options: UseMyBetsOptions = {}): UseMyBetsReturn {
     }));
   }, [filteredBets]);
 
-  // Obliczanie statystyk
+  // Obliczanie statystyk (z wszystkich zakładów, nie tylko przefiltrowanych)
   const stats = useMemo(() => calculateBetStats(bets), [bets]);
 
   // Akcje
   const setFilters = useCallback((newFilters: Partial<BetFilterState>) => {
     setFiltersState((prev) => ({ ...prev, ...newFilters }));
-    setPagination((prev) => ({ ...prev, offset: 0 })); // Reset paginacji
-  }, []);
-
-  const setPage = useCallback((page: number) => {
-    setPagination((prev) => ({
-      ...prev,
-      offset: (page - 1) * prev.limit,
-    }));
+    // Reset listy przy zmianie filtrów - fetchBets() zostanie wywołane przez useEffect
   }, []);
 
   const deleteBet = useCallback(async (betId: number) => {
@@ -537,10 +590,12 @@ function useMyBets(options: UseMyBetsOptions = {}): UseMyBetsReturn {
         throw new Error(data.error || "Failed to delete bet");
       }
 
-      // Odśwież listę po usunięciu
-      await fetchBets();
+      // Usuń zakład z lokalnego stanu (optymistyczna aktualizacja)
+      setBets((prev) => prev.filter((bet) => bet.id !== betId));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
+      // W przypadku błędu odśwież listę
+      await fetchBets();
     } finally {
       setDeletingBetId(null);
     }
@@ -548,14 +603,15 @@ function useMyBets(options: UseMyBetsOptions = {}): UseMyBetsReturn {
 
   return {
     bets: betsWithStatus,
-    pagination,
     stats,
     filters,
     isLoading,
+    isLoadingMore,
     error,
+    hasMore,
     deletingBetId,
     setFilters,
-    setPage,
+    loadMore,
     deleteBet,
     refresh: fetchBets,
   };
@@ -664,12 +720,11 @@ const fetchTournaments = async (): Promise<TournamentDTO[]> => {
 
 | Interakcja | Komponent | Akcja | Efekt |
 |------------|-----------|-------|-------|
-| Zmiana filtra turnieju | BetFilters > TournamentSelect | `setFilters({ tournamentId })` | Ponowne pobranie zakładów, reset paginacji, aktualizacja URL |
+| Zmiana filtra turnieju | BetFilters > TournamentSelector | `setFilters({ tournamentId })` | Ponowne pobranie zakładów, reset listy, aktualizacja URL |
 | Zmiana filtra statusu | BetFilters > StatusSelect | `setFilters({ status })` | Filtrowanie client-side, aktualizacja URL |
-| Kliknięcie "Poprzednia strona" | Pagination | `setPage(currentPage - 1)` | Pobranie poprzedniej strony zakładów |
-| Kliknięcie "Następna strona" | Pagination | `setPage(currentPage + 1)` | Pobranie następnej strony zakładów |
+| Kliknięcie "Załaduj więcej" | LoadMoreButton | `loadMore()` | Dołączenie kolejnych zakładów do listy |
 | Kliknięcie przycisku usunięcia | BetCard > DeleteBetButton | Otwarcie AlertDialog | Wyświetlenie dialogu potwierdzenia |
-| Potwierdzenie usunięcia | AlertDialog | `deleteBet(betId)` | Usunięcie zakładu, odświeżenie listy |
+| Potwierdzenie usunięcia | AlertDialog | `deleteBet(betId)` | Usunięcie zakładu z listy (optymistycznie) |
 | Anulowanie usunięcia | AlertDialog | Zamknięcie dialogu | Brak zmian |
 | Kliknięcie w kartę meczu | BetCard | Nawigacja | Przekierowanie do `/matches/:matchId` |
 
@@ -700,8 +755,8 @@ const fetchTournaments = async (): Promise<TournamentDTO[]> => {
 |---------|-----------|---------------|----------|
 | Możliwość usunięcia zakładu | BetCard | `match.status === 'SCHEDULED' && match_datetime > now + 5min` | Przycisk usunięcia widoczny/ukryty |
 | Status zakładu | BetCard | Porównanie `picked_result` z `match.result` | Kolorowe obramowanie karty |
-| Dostępność poprzedniej strony | Pagination | `pagination.offset > 0` | Przycisk enabled/disabled |
-| Dostępność następnej strony | Pagination | `pagination.has_more === true` | Przycisk enabled/disabled |
+| Widoczność "Załaduj więcej" | LoadMoreButton | `hasMore === true && !isLoading` | Przycisk widoczny/ukryty |
+| Dostępność "Załaduj więcej" | LoadMoreButton | `!isLoadingMore` | Przycisk enabled/disabled |
 
 ### Funkcja walidacji możliwości usunięcia
 
@@ -869,51 +924,64 @@ function BetListSkeleton({ count = 5 }: { count?: number }) {
 
 ### Krok 1: Przygotowanie typów i funkcji pomocniczych
 
-1. Utworzenie pliku `src/types/my-bets.types.ts` z typami ViewModel
-2. Utworzenie pliku `src/lib/utils/bet-utils.ts` z funkcjami:
+1. Utworzenie pliku `src/lib/utils/bet-utils.ts` z funkcjami:
+   - Ekstrakcja `getResultLabel()` i `getResultDescription()` z `MatchResult.tsx`
    - `getBetDisplayStatus()`
    - `canDeleteBet()`
    - `calculateBetStats()`
-   - `formatMatchResult()`
+2. Aktualizacja `src/components/matches/MatchResult.tsx` aby importował funkcje z `bet-utils.ts`
+3. Utworzenie pliku `src/types/my-bets.types.ts` z typami ViewModel
 
-### Krok 2: Implementacja custom hook `useMyBets`
+### Krok 2: Instalacja brakujących komponentów Shadcn/ui
+
+```bash
+npx shadcn@latest add alert-dialog badge skeleton
+```
+
+### Krok 3: Implementacja custom hook `useMyBets`
 
 1. Utworzenie pliku `src/components/hooks/useMyBets.ts`
-2. Implementacja logiki pobierania danych z API
-3. Implementacja filtrowania i paginacji
-4. Implementacja akcji usuwania zakładu
-5. Dodanie synchronizacji z URL
+2. Implementacja logiki pobierania danych z API (wzorowana na `useMatches`)
+3. Implementacja "Load More" (infinite scroll)
+4. Implementacja filtrowania client-side po statusie
+5. Implementacja akcji usuwania zakładu z optymistyczną aktualizacją
+6. Dodanie synchronizacji filtrów z URL
 
-### Krok 3: Implementacja komponentów atomowych
+### Krok 4: Rozszerzenie TournamentSelector (opcjonalnie)
+
+Jeśli potrzebna opcja "Wszystkie turnieje":
+1. Rozszerzenie `src/components/matches/TournamentSelector.tsx` o prop `allowAll?: boolean`
+2. Dodanie `SelectItem` z wartością pustą dla opcji "Wszystkie"
+
+### Krok 5: Implementacja komponentów atomowych
 
 1. `StatCard` - karta pojedynczej statystyki
-2. `TournamentSelect` - dropdown turnieju
-3. `StatusSelect` - dropdown statusu
-4. `DeleteBetButton` - przycisk z dialogiem potwierdzenia
-5. `EmptyState` - stan pusty dla listy
+2. `StatusSelect` - dropdown statusu zakładu
+3. `DeleteBetButton` - przycisk z dialogiem potwierdzenia (używa AlertDialog)
+4. `EmptyState` - stan pusty dla listy
+5. `LoadMoreButton` - przycisk ładowania kolejnych (spójny z MatchesView)
 
-### Krok 4: Implementacja komponentów złożonych
+### Krok 6: Implementacja komponentów złożonych
 
 1. `BetStats` - sekcja statystyk (używa StatCard)
-2. `BetFilters` - sekcja filtrów (używa TournamentSelect, StatusSelect)
+2. `BetFilters` - sekcja filtrów (używa TournamentSelector, StatusSelect)
 3. `MatchInfo` - informacje o meczu w karcie
-4. `BetOutcome` - wynik zakładu w karcie
+4. `BetOutcome` - wynik zakładu w karcie (używa funkcji z bet-utils.ts)
 5. `BetCard` - pełna karta zakładu (używa MatchInfo, BetOutcome, DeleteBetButton)
 
-### Krok 5: Implementacja głównych komponentów widoku
+### Krok 7: Implementacja głównych komponentów widoku
 
-1. `BetList` - lista zakładów (używa BetCard, EmptyState)
-2. `Pagination` - kontrolki paginacji
-3. `MyBetsView` - główny komponent React (orkiestruje wszystko)
+1. `BetList` - lista zakładów (używa BetCard, EmptyState, LoadMoreButton)
+2. `MyBetsView` - główny komponent React (orkiestruje wszystko)
 
-### Krok 6: Implementacja strony Astro
+### Krok 8: Implementacja strony Astro
 
 1. Utworzenie pliku `src/pages/my-bets.astro`
 2. Implementacja sprawdzenia autoryzacji (middleware)
 3. Osadzenie komponentu `<MyBetsView client:load />`
 4. Przekazanie początkowych parametrów z URL
 
-### Krok 7: Integracja i testy
+### Krok 9: Integracja i testy
 
 1. Weryfikacja integracji z API `/api/me/bets`
 2. Weryfikacja integracji z API `/api/bets/:id` (DELETE)
@@ -921,30 +989,25 @@ function BetListSkeleton({ count = 5 }: { count?: number }) {
    - Pobieranie zakładów
    - Filtrowanie po turnieju
    - Filtrowanie po statusie
-   - Paginacja
+   - Load More
    - Usuwanie zakładu
    - Obsługa błędów
 4. Testy responsywności (mobile, tablet, desktop)
 5. Testy dostępności (keyboard navigation, screen reader)
 
-### Krok 8: Dopracowanie UX
+### Krok 10: Dopracowanie UX
 
-1. Dodanie animacji przejść (Framer Motion lub CSS transitions)
-2. Optymistyczne aktualizacje UI przy usuwaniu
-3. Infinite scroll jako alternatywa dla paginacji (opcjonalnie)
-4. Skeleton loading states
-5. Toast notifications dla akcji
+1. Skeleton loading states
+2. Toast notifications dla akcji (używa Sonner)
+3. Animacje przejść (CSS transitions)
 
-### Krok 9: Optymalizacja
+### Krok 11: Optymalizacja
 
 1. Memoizacja komponentów z `React.memo()`
 2. Optymalizacja re-renderów z `useMemo()` i `useCallback()`
-3. Lazy loading komponentów dialogu
-4. Debouncing dla filtrów (jeśli będzie wyszukiwarka)
+3. Lazy loading komponentu AlertDialog
 
-### Krok 10: Dokumentacja i code review
+### Krok 12: Code review
 
-1. Dodanie komentarzy JSDoc do publicznych funkcji
-2. Aktualizacja pliku README (jeśli potrzebne)
-3. Code review zgodnie z wytycznymi z CLAUDE.md
-4. Weryfikacja zgodności z ESLint i Prettier
+1. Weryfikacja zgodności z ESLint i Prettier
+2. Code review zgodnie z wytycznymi z CLAUDE.md

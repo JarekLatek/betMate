@@ -52,6 +52,11 @@ npm run format           # Format code with Prettier
 ├── assets/           # Static internal assets
 └── public/           # Public assets
 
+./supabase
+└── functions/         # Supabase Edge Functions (Deno runtime)
+    ├── deno.json      # Deno configuration + import maps
+    └── sync-matches/  # Match synchronization function
+
 Key architectural notes:
 - Path alias `@/*` maps to `./src/*` (configured in tsconfig.json)
 - Astro runs in server mode with Node.js adapter (standalone mode)
@@ -100,6 +105,28 @@ The project uses two Supabase clients with `@supabase/ssr` for proper cookie-bas
 - Store client setup and type definitions in `src/db/`
 - Use Zod schemas to validate data exchanged with backend
 - Auth redirects use `window.location.href` (full page reload) for session sync
+
+### Supabase Edge Functions
+
+Edge Functions are located in `supabase/functions/` and run on Deno runtime.
+
+**Development setup:**
+- VSCode uses Deno LSP for this folder (configured in `.vscode/settings.json`)
+- Install Deno extension: `denoland.vscode-deno`
+- Cache dependencies: `deno cache supabase/functions/<function>/index.ts`
+
+**sync-matches function:**
+
+Synchronizes matches from api-football.com to database. Two modes of operation:
+
+| Mode | Endpoint | Schedule | Description |
+|------|----------|----------|-------------|
+| `full` | `?mode=full` | Every 2-6h | Fetches only NEW matches (not in DB) |
+| `live` | `?mode=live` | Every 5-15 min | Updates IN_PLAY matches + starting games |
+
+Smart optimizations:
+- `full`: Uses `from` date filter, INSERT only new `api_match_id`
+- `live`: Skips API call if no matches need updating
 
 ### Error Handling Pattern
 

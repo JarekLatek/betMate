@@ -71,6 +71,25 @@ Kluczowe założenia:
 - **Kluczowe informacje**: Punktacja (1 pkt za trafienie), zasady blokady (5 min przed), obsługa odwołanych meczów.
 - **Kluczowe komponenty**: `RulesModal` (Dialog z Shadcn/ui).
 
+### 2.6. Widok Moich Zakładów
+
+- **Ścieżka**: `/my-bets` (z opcjonalnym `?tournamentId=...`)
+- **Główny cel**: Przegląd historii typowań użytkownika oraz statystyk skuteczności.
+- **Kluczowe informacje**:
+  - Lista wszystkich zakładów użytkownika.
+  - Status zakładu (oczekujący, trafiony, pudło).
+  - Mecz powiązany z zakładem (drużyny, data, wynik).
+  - Statystyki skuteczności (trafienia, pudła, %).
+- **Kluczowe komponenty**:
+  - `BetList` (paginowana lista zakładów użytkownika).
+  - `BetFilters` (filtr po turnieju, statusie: wszystkie/oczekujące/rozstrzygnięte).
+  - `BetStats` (podsumowanie: liczba trafień, pudła, % skuteczności).
+  - `BetCard` (pojedynczy zakład z informacjami o meczu i wyniku).
+- **UX/Dostępność**:
+  - Kolorowe oznaczenie trafionych (zielony) i nietrafionych (szary/czerwony) zakładów.
+  - Możliwość usunięcia zakładu (tylko dla meczów, które jeszcze się nie rozpoczęły).
+  - Przycisk szybkiego przejścia do meczu w widoku głównym.
+
 ## 3. Mapa podróży użytkownika
 
 ### Scenariusz Główny: Codzienne Obstawianie
@@ -103,7 +122,7 @@ Struktura layoutu zmienia się w zależności od szerokości ekranu (Responsive 
 
 - **Nagłówek (Sticky Top)**:
   - Lewa: Logo betMate.
-  - Środek: Linki nawigacyjne [Mecze | Ranking].
+  - Środek: Linki nawigacyjne [Mecze | Moje Typy | Ranking].
   - Prawa:
     - `TournamentSelector` (Dropdown).
     - `UserMenu` (Avatar -> Dropdown: Profil, Zasady, Dark Mode, Wyloguj).
@@ -118,6 +137,7 @@ Struktura layoutu zmienia się w zależności od szerokości ekranu (Responsive 
 - **Content**: Pełna szerokość z paddingiem.
 - **Dolny Pasek Nawigacyjny (Fixed Bottom)**:
   - Ikona + Etykieta: "Mecze" (kieruje do `/`).
+  - Ikona + Etykieta: "Moje Typy" (kieruje do `/my-bets`).
   - Ikona + Etykieta: "Ranking" (kieruje do `/leaderboard`).
   - Aktywny element jest wyróżniony kolorem akcentowym.
 

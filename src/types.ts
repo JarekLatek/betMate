@@ -99,7 +99,15 @@ export type MatchDetailDTO = MatchDTO & {
  */
 export type MatchSummaryDTO = Pick<
   MatchEntity,
-  "id" | "tournament_id" | "home_team" | "away_team" | "match_datetime" | "status" | "result" | "home_score" | "away_score"
+  | "id"
+  | "tournament_id"
+  | "home_team"
+  | "away_team"
+  | "match_datetime"
+  | "status"
+  | "result"
+  | "home_score"
+  | "away_score"
 >;
 
 /**

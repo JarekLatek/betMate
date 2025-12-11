@@ -1,5 +1,6 @@
 import { CheckCircleIcon, XCircleIcon, MinusCircleIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getResultLabel, getResultDescription } from "@/lib/utils/bet-utils";
 import type { MatchOutcome } from "@/types";
 
 interface MatchResultProps {
@@ -7,28 +8,6 @@ interface MatchResultProps {
   actualResult: MatchOutcome | null;
   homeScore: number | null;
   awayScore: number | null;
-}
-
-function getResultLabel(result: MatchOutcome): string {
-  switch (result) {
-    case "HOME_WIN":
-      return "1";
-    case "DRAW":
-      return "X";
-    case "AWAY_WIN":
-      return "2";
-  }
-}
-
-function getResultDescription(result: MatchOutcome): string {
-  switch (result) {
-    case "HOME_WIN":
-      return "Wygrana gospodarzy";
-    case "DRAW":
-      return "Remis";
-    case "AWAY_WIN":
-      return "Wygrana gości";
-  }
 }
 
 export function MatchResult({ userPrediction, actualResult, homeScore, awayScore }: MatchResultProps) {

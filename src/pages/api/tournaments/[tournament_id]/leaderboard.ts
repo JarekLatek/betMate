@@ -80,6 +80,8 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
     }
 
     // Handle unexpected errors
+    // eslint-disable-next-line no-console
+    console.error("Leaderboard API error:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

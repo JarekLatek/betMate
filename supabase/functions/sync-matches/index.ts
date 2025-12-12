@@ -103,12 +103,124 @@ interface SyncResults {
   mode: "full" | "live";
   tournaments: { processed: number; errors: number };
   matches: { inserted: number; updated: number; skipped: number; errors: number };
+  scoring: { processed_matches: number; updated_scores: number; errors: number };
 }
 
 interface MatchToUpdate {
   id: string;
   api_match_id: number;
   tournament_id: string;
+}
+
+interface UnscoredMatch {
+  id: number;
+  tournament_id: number;
+  result: MatchOutcome;
+}
+
+interface BetToScore {
+  id: number;
+  user_id: string;
+  picked_result: MatchOutcome;
+}
+
+const POINTS_FOR_CORRECT_BET = 3;
+
+/**
+ * Score all unscored finished matches
+ * Awards points to users who correctly predicted match results
+ */
+async function scoreFinishedMatches(
+  supabase: SupabaseClient
+): Promise<{ processed_matches: number; updated_scores: number; errors: number }> {
+  const result = { processed_matches: 0, updated_scores: 0, errors: 0 };
+
+  // 1. Get all unscored finished matches
+  const { data: unscoredMatches, error: fetchError } = await supabase
+    .from("matches")
+    .select("id, tournament_id, result")
+    .eq("status", "FINISHED")
+    .eq("is_scored", false)
+    .not("result", "is", null);
+
+  if (fetchError) {
+    console.error("[SCORING] Error fetching unscored matches:", fetchError);
+    result.errors++;
+    return result;
+  }
+
+  if (!unscoredMatches || unscoredMatches.length === 0) {
+    console.log("[SCORING] No unscored matches to process");
+    return result;
+  }
+
+  console.log(`[SCORING] Found ${unscoredMatches.length} unscored matches`);
+
+  // 2. Process each match
+  for (const match of unscoredMatches as UnscoredMatch[]) {
+    try {
+      // Get all bets for this match
+      const { data: bets, error: betsError } = await supabase
+        .from("bets")
+        .select("id, user_id, picked_result")
+        .eq("match_id", match.id);
+
+      if (betsError) {
+        console.error(`[SCORING] Error fetching bets for match ${match.id}:`, betsError);
+        result.errors++;
+        continue;
+      }
+
+      // Award points for correct predictions
+      for (const bet of (bets || []) as BetToScore[]) {
+        if (bet.picked_result === match.result) {
+          // Get existing score or default to 0
+          const { data: existing } = await supabase
+            .from("scores")
+            .select("points")
+            .eq("user_id", bet.user_id)
+            .eq("tournament_id", match.tournament_id)
+            .single();
+
+          const newPoints = (existing?.points || 0) + POINTS_FOR_CORRECT_BET;
+
+          const { error: upsertError } = await supabase.from("scores").upsert(
+            {
+              user_id: bet.user_id,
+              tournament_id: match.tournament_id,
+              points: newPoints,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id,tournament_id" }
+          );
+
+          if (upsertError) {
+            console.error(`[SCORING] Error updating score for user ${bet.user_id}:`, upsertError);
+            result.errors++;
+          } else {
+            result.updated_scores++;
+            console.log(`[SCORING] Awarded ${POINTS_FOR_CORRECT_BET} points to user ${bet.user_id}`);
+          }
+        }
+      }
+
+      // Mark match as scored
+      const { error: markError } = await supabase.from("matches").update({ is_scored: true }).eq("id", match.id);
+
+      if (markError) {
+        console.error(`[SCORING] Error marking match ${match.id} as scored:`, markError);
+        result.errors++;
+      } else {
+        result.processed_matches++;
+      }
+    } catch (error) {
+      console.error(`[SCORING] Error processing match ${match.id}:`, error);
+      result.errors++;
+    }
+  }
+
+  console.log(`[SCORING] Completed: ${result.processed_matches} matches, ${result.updated_scores} scores updated`);
+  return result;
 }
 
 /**
@@ -118,8 +230,8 @@ async function syncFullMode(
   supabase: SupabaseClient,
   footballApiUrl: string,
   footballApiKey: string
-): Promise<SyncResults> {
-  const results: SyncResults = {
+): Promise<Omit<SyncResults, "scoring">> {
+  const results: Omit<SyncResults, "scoring"> = {
     mode: "full",
     tournaments: { processed: 0, errors: 0 },
     matches: { inserted: 0, updated: 0, skipped: 0, errors: 0 },
@@ -242,8 +354,8 @@ async function syncLiveMode(
   supabase: SupabaseClient,
   footballApiUrl: string,
   footballApiKey: string
-): Promise<SyncResults> {
-  const results: SyncResults = {
+): Promise<Omit<SyncResults, "scoring">> {
+  const results: Omit<SyncResults, "scoring"> = {
     mode: "live",
     tournaments: { processed: 0, errors: 0 },
     matches: { inserted: 0, updated: 0, skipped: 0, errors: 0 },
@@ -382,9 +494,18 @@ Deno.serve(async (req) => {
         ? await syncFullMode(supabase, footballApiUrl, footballApiKey)
         : await syncLiveMode(supabase, footballApiUrl, footballApiKey);
 
-    console.log("Sync completed:", results);
+    // Run scoring for any finished matches
+    console.log("Running scoring for finished matches...");
+    const scoringResults = await scoreFinishedMatches(supabase);
 
-    return new Response(JSON.stringify({ success: true, results }), {
+    const finalResults = {
+      ...results,
+      scoring: scoringResults,
+    };
+
+    console.log("Sync completed:", finalResults);
+
+    return new Response(JSON.stringify({ success: true, results: finalResults }), {
       headers: { "Content-Type": "application/json" },
       status: 200,
     });

@@ -90,7 +90,7 @@ export async function getLeaderboard(
     .select("user_id, points, profiles!inner(username)")
     .eq("tournament_id", tournamentId)
     .order("points", { ascending: false })
-    .order("profiles.username", { ascending: true }) // Secondary sort for consistency
+    .order("user_id", { ascending: true }) // Secondary sort for consistency (by user_id since ordering by joined table is not supported)
     .range(offset, offset + limit - 1);
 
   if (error) {

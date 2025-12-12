@@ -58,7 +58,7 @@ export function MatchesView({ initialTournaments = [] }: MatchesViewProps) {
     }
   }, [initialTournaments.length]);
 
-  const handleTournamentChange = useCallback((id: number) => {
+  const handleTournamentChange = useCallback((id: number | null) => {
     setSelectedTournamentId(id);
   }, []);
 

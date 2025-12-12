@@ -26,9 +26,9 @@ export function BetCard({ bet, onDelete, isDeleting = false }: BetCardProps) {
     <Card className={cn("border-l-4", borderStyles[bet.displayStatus])}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">
-          <a href={`/?match=${bet.match.id}`} className="flex-1 hover:underline">
+          <div className="flex-1">
             <MatchInfo match={bet.match} />
-          </a>
+          </div>
           <div className="flex items-start gap-2">
             <BetOutcome pickedResult={bet.picked_result} status={bet.displayStatus} />
             {bet.canDelete && <DeleteBetButton onDelete={handleDelete} isDeleting={isDeleting} />}

@@ -249,6 +249,9 @@ async function syncLiveMode(
     matches: { inserted: 0, updated: 0, skipped: 0, errors: 0 },
   };
 
+  // API-Football limit for IDs per request
+  const API_BATCH_SIZE = 20;
+
   // 1. Find matches that are IN_PLAY or SCHEDULED but should have started
   const now = new Date().toISOString();
 
@@ -274,55 +277,67 @@ async function syncLiveMode(
   const apiMatchIds = matchesToUpdate.map((m: MatchToUpdate) => m.api_match_id);
   const matchIdMap = new Map<number, MatchToUpdate>(matchesToUpdate.map((m: MatchToUpdate) => [m.api_match_id, m]));
 
-  // 3. Fetch current status from API (using fixture IDs)
-  // API-Football allows fetching multiple fixtures by ID
-  const idsParam = apiMatchIds.join("-");
-  const fixturesUrl = `${footballApiUrl}/fixtures?ids=${idsParam}`;
-
-  console.log(`[LIVE] Fetching ${apiMatchIds.length} fixtures from API`);
-
-  const fixturesResponse = await fetch(fixturesUrl, {
-    headers: { "x-apisports-key": footballApiKey },
-  });
-
-  if (!fixturesResponse.ok) {
-    console.error(`[LIVE] API error: ${fixturesResponse.status}`);
-    throw new Error(`API returned ${fixturesResponse.status}`);
+  // 3. Split IDs into batches of API_BATCH_SIZE (API limit is 20)
+  const batches: number[][] = [];
+  for (let i = 0; i < apiMatchIds.length; i += API_BATCH_SIZE) {
+    batches.push(apiMatchIds.slice(i, i + API_BATCH_SIZE));
   }
 
-  const fixturesData: ApiResponse = await fixturesResponse.json();
+  console.log(`[LIVE] Processing ${batches.length} batch(es) of fixtures`);
 
-  if (fixturesData.errors && Object.keys(fixturesData.errors).length > 0) {
-    console.error("[LIVE] API errors:", fixturesData.errors);
-    throw new Error("API returned errors");
-  }
+  // 4. Process each batch
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+    const batch = batches[batchIndex];
+    const idsParam = batch.join("-");
+    const fixturesUrl = `${footballApiUrl}/fixtures?ids=${idsParam}`;
 
-  // 4. Update each match with fresh data
-  for (const fixture of fixturesData.response) {
-    const matchInfo = matchIdMap.get(fixture.fixture.id);
-    if (!matchInfo) continue;
+    console.log(`[LIVE] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} fixtures)`);
 
-    const status = mapApiStatus(fixture.fixture.status.short);
-    const result = status === "FINISHED" ? calculateResult(fixture.goals.home, fixture.goals.away) : null;
+    const fixturesResponse = await fetch(fixturesUrl, {
+      headers: { "x-apisports-key": footballApiKey },
+    });
 
-    const { error: updateError } = await supabase
-      .from("matches")
-      .update({
-        status: status,
-        result: result,
-        home_score: fixture.goals.home,
-        away_score: fixture.goals.away,
-      })
-      .eq("id", matchInfo.id);
+    if (!fixturesResponse.ok) {
+      console.error(`[LIVE] API error for batch ${batchIndex + 1}: ${fixturesResponse.status}`);
+      results.matches.errors += batch.length;
+      continue;
+    }
 
-    if (updateError) {
-      console.error(`[LIVE] Error updating match ${fixture.fixture.id}:`, updateError);
-      results.matches.errors++;
-    } else {
-      results.matches.updated++;
-      console.log(
-        `[LIVE] Updated match ${fixture.fixture.id}: ${status} (${fixture.goals.home}-${fixture.goals.away})`
-      );
+    const fixturesData: ApiResponse = await fixturesResponse.json();
+
+    if (fixturesData.errors && Object.keys(fixturesData.errors).length > 0) {
+      console.error(`[LIVE] API errors for batch ${batchIndex + 1}:`, fixturesData.errors);
+      results.matches.errors += batch.length;
+      continue;
+    }
+
+    // 5. Update each match with fresh data
+    for (const fixture of fixturesData.response) {
+      const matchInfo = matchIdMap.get(fixture.fixture.id);
+      if (!matchInfo) continue;
+
+      const status = mapApiStatus(fixture.fixture.status.short);
+      const result = status === "FINISHED" ? calculateResult(fixture.goals.home, fixture.goals.away) : null;
+
+      const { error: updateError } = await supabase
+        .from("matches")
+        .update({
+          status: status,
+          result: result,
+          home_score: fixture.goals.home,
+          away_score: fixture.goals.away,
+        })
+        .eq("id", matchInfo.id);
+
+      if (updateError) {
+        console.error(`[LIVE] Error updating match ${fixture.fixture.id}:`, updateError);
+        results.matches.errors++;
+      } else {
+        results.matches.updated++;
+        console.log(
+          `[LIVE] Updated match ${fixture.fixture.id}: ${status} (${fixture.goals.home}-${fixture.goals.away})`
+        );
+      }
     }
   }
 

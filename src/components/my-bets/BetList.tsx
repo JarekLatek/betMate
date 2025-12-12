@@ -66,7 +66,7 @@ export function BetList({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
       {bets.map((bet) => (
         <BetCard key={bet.id} bet={bet} onDelete={onDeleteBet} isDeleting={deletingBetId === bet.id} />
       ))}

@@ -42,12 +42,15 @@ export const GET: APIRoute = async (context) => {
 
   // 2. Parse and validate query parameters
   const url = new URL(context.request.url);
-  const rawParams = {
-    tournament_id: url.searchParams.get("tournament_id"),
-    match_id: url.searchParams.get("match_id"),
-    limit: url.searchParams.get("limit"),
-    offset: url.searchParams.get("offset"),
-  };
+  // Filter out null values to prevent Zod coercion issues (Number(null) = 0 fails .positive())
+  const rawParams = Object.fromEntries(
+    Object.entries({
+      tournament_id: url.searchParams.get("tournament_id"),
+      match_id: url.searchParams.get("match_id"),
+      limit: url.searchParams.get("limit"),
+      offset: url.searchParams.get("offset"),
+    }).filter(([, v]) => v !== null)
+  );
 
   const validationResult = getUserBetsQuerySchema.safeParse(rawParams);
 

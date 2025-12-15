@@ -45,8 +45,25 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (isRegisterMode) {
-        // Registration flow
+        // Registration flow - two-step process (US-001)
         const registerData = data as RegisterFormValues;
+
+        // Step 1: Check username availability
+        const checkResponse = await fetch("/api/auth/check-username", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: registerData.username }),
+        });
+
+        const checkResult = (await checkResponse.json()) as { available: boolean; message?: string };
+
+        if (!checkResult.available) {
+          setServerError(checkResult.message ?? "Nazwa użytkownika jest już zajęta");
+          setIsLoading(false);
+          return;
+        }
+
+        // Step 2: Create account via Supabase Auth
         const { data: authData, error } = await supabaseBrowser.auth.signUp({
           email: registerData.email,
           password: registerData.password,
@@ -168,6 +185,14 @@ export function AuthForm({ mode }: AuthFormProps) {
                 </FormItem>
               )}
             />
+
+            {!isRegisterMode && (
+              <div className="text-right">
+                <a href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary hover:underline">
+                  Zapomniałem hasła
+                </a>
+              </div>
+            )}
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Ładowanie..." : isRegisterMode ? "Zarejestruj się" : "Zaloguj się"}

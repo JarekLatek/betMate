@@ -22,7 +22,33 @@ Kluczowe założenia:
 - **Kluczowe komponenty**:
   - `AuthForm` (komponent React z obsługą Supabase Auth).
   - Linki przełączające między logowaniem a rejestracją.
-- **UX/Bezpieczeństwo**: Walidacja haseł po stronie klienta, jasne komunikaty błędów, przekierowanie do `/` po sukcesie.
+  - Link "Zapomniałem hasła" (jeśli zaimplementowane).
+- **UX/Bezpieczeństwo**: Walidacja haseł po stronie klienta, jasne komunikaty błędów, przekierowanie do `/` po sukcesie, dwuetapowa walidacja username przy rejestracji (check-username API + Supabase Auth).
+
+### 2.1.1. Ekran Odzyskiwania Hasła (OPCJONALNE - poza MVP)
+
+- **Ścieżka**: `/forgot-password`
+- **Główny cel**: Umożliwienie użytkownikowi zresetowania zapomnianego hasła.
+- **Kluczowe informacje**: Formularz z polem email, komunikat o wysłaniu linku.
+- **Kluczowe komponenty**:
+  - `ForgotPasswordForm` (komponent React).
+  - Link powrotny do `/login`.
+- **UX**: Jasny komunikat sukcesu "Sprawdź swoją skrzynkę email", obsługa błędów (np. nieistniejący email).
+
+### 2.1.2. Ekran Ustawienia Nowego Hasła (OPCJONALNE - poza MVP)
+
+- **Ścieżka**: `/reset-password`
+- **Główny cel**: Ustawienie nowego hasła po kliknięciu linku z emaila.
+- **Kluczowe informacje**: Formularz z polami hasła i potwierdzenia hasła.
+- **Kluczowe komponenty**:
+  - `ResetPasswordForm` (komponent React).
+- **UX**: Walidacja zgodności haseł, przekierowanie do `/login` po sukcesie.
+
+### 2.1.3. Callback Supabase Auth (OPCJONALNE - poza MVP)
+
+- **Ścieżka**: `/auth/callback`
+- **Główny cel**: Obsługa redirectów z Supabase Auth (weryfikacja email, reset hasła).
+- **Kluczowe komponenty**: Strona Astro bez UI - tylko logika przekierowań.
 
 ### 2.2. Widok Meczów (Ekran Główny)
 

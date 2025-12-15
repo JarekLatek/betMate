@@ -13,6 +13,9 @@ Widok wykorzystuje Supabase Auth z pakietem `@supabase/ssr` do obsługi uwierzyt
 
 - `/login` - Strona logowania
 - `/register` - Strona rejestracji
+- `/forgot-password` - Strona żądania resetu hasła (OPCJONALNE - poza MVP)
+- `/reset-password` - Strona ustawienia nowego hasła (OPCJONALNE - poza MVP)
+- `/auth/callback` - Obsługa callbacków Supabase Auth (OPCJONALNE - poza MVP)
 
 ## 3. Struktura komponentów
 
@@ -25,10 +28,16 @@ src/
 │   └── index.ts            # Weryfikacja sesji, ustawienie context.locals
 ├── pages/
 │   ├── login.astro         # Strona logowania (wrapper)
-│   └── register.astro      # Strona rejestracji (wrapper)
+│   ├── register.astro      # Strona rejestracji (wrapper)
+│   ├── forgot-password.astro  # Strona żądania resetu hasła (OPCJONALNE)
+│   ├── reset-password.astro   # Strona ustawienia nowego hasła (OPCJONALNE)
+│   └── auth/
+│       └── callback.astro     # Obsługa callbacków Supabase Auth (OPCJONALNE)
 └── components/
     └── auth/
-        └── auth-form.tsx   # Główny komponent formularza (React)
+        ├── auth-form.tsx              # Formularz logowania/rejestracji (React)
+        ├── forgot-password-form.tsx   # Formularz żądania resetu (OPCJONALNE)
+        └── reset-password-form.tsx    # Formularz nowego hasła (OPCJONALNE)
 ```
 
 ## 4. Szczegóły komponentów
@@ -66,6 +75,132 @@ src/
 - **Obsługiwane interakcje**: Brak (statyczne kontenery).
 - **Typy**: Brak.
 - **Propsy**: Brak.
+
+---
+
+## 4.1 Komponenty opcjonalne (poza zakresem MVP)
+
+### `ForgotPasswordForm` (`src/components/auth/forgot-password-form.tsx`)
+
+**Status:** OPCJONALNE - FR-001 nie wymaga odzyskiwania hasła
+
+- **Opis komponentu**: Formularz żądania resetu hasła. Użytkownik podaje email, a system wysyła link do resetu.
+- **Główne elementy**:
+  - `Card` (Shadcn UI) - kontener formularza.
+  - `Form` (React Hook Form) - obsługa stanu formularza.
+  - `Input` - pole dla email.
+  - `Button` - przycisk submit.
+  - Link powrotny do `/login`.
+- **Obsługiwane interakcje**:
+  - Wpisanie adresu email.
+  - Wysłanie formularza.
+- **Obsługiwana walidacja**:
+  - **Email**: Wymagany, poprawny format adresu e-mail.
+- **Typy**:
+  ```typescript
+  const forgotPasswordSchema = z.object({
+    email: z.string().email('Nieprawidłowy adres email'),
+  });
+  type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+  ```
+- **Integracja API**:
+  - **Metoda**: `supabaseBrowser.auth.resetPasswordForEmail(email, { redirectTo: '/reset-password' })`
+  - **Sukces**: Wyświetlenie komunikatu "Sprawdź swoją skrzynkę email"
+  - **Błąd**: Wyświetlenie komunikatu błędu
+
+### `ResetPasswordForm` (`src/components/auth/reset-password-form.tsx`)
+
+**Status:** OPCJONALNE - FR-001 nie wymaga odzyskiwania hasła
+
+- **Opis komponentu**: Formularz ustawienia nowego hasła. Dostępny po kliknięciu linku z emaila.
+- **Główne elementy**:
+  - `Card` (Shadcn UI) - kontener formularza.
+  - `Form` (React Hook Form) - obsługa stanu formularza.
+  - `Input` - pola dla nowego hasła i potwierdzenia.
+  - `Button` - przycisk submit.
+- **Obsługiwane interakcje**:
+  - Wpisanie nowego hasła i potwierdzenia.
+  - Wysłanie formularza.
+- **Obsługiwana walidacja**:
+  - **Hasło**: Wymagane, minimum 6 znaków.
+  - **Potwierdzenie hasła**: Musi być identyczne z hasłem.
+- **Typy**:
+  ```typescript
+  const resetPasswordSchema = z.object({
+    password: z.string().min(6, 'Hasło musi mieć minimum 6 znaków'),
+    confirmPassword: z.string(),
+  }).refine(data => data.password === data.confirmPassword, {
+    message: 'Hasła muszą być identyczne',
+    path: ['confirmPassword'],
+  });
+  type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+  ```
+- **Integracja API**:
+  - **Metoda**: `supabaseBrowser.auth.updateUser({ password })`
+  - **Sukces**: Przekierowanie do `/login` z komunikatem sukcesu
+  - **Błąd**: Wyświetlenie komunikatu błędu
+
+### `callback.astro` (`src/pages/auth/callback.astro`)
+
+**Status:** OPCJONALNE - wymagany tylko dla weryfikacji email i resetu hasła
+
+- **Opis**: Strona Astro obsługująca callbacki z Supabase Auth (weryfikacja email, reset hasła).
+- **Logika**:
+  ```typescript
+  ---
+  export const prerender = false;
+
+  const { url } = Astro;
+  const code = url.searchParams.get('code');
+  const next = url.searchParams.get('next') ?? '/';
+
+  if (code) {
+    const { error } = await Astro.locals.supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      return Astro.redirect(next);
+    }
+  }
+
+  return Astro.redirect('/login?error=auth_callback_error');
+  ---
+  ```
+- **Konfiguracja Supabase**: Wymaga dodania URL callbacka w Supabase Dashboard:
+  - `http://localhost:3000/auth/callback` (dev)
+  - `https://production-domain.com/auth/callback` (prod)
+
+### Weryfikacja Email (OPCJONALNE)
+
+**Status:** OPCJONALNE - PRD nie wymaga weryfikacji email
+
+Jeśli w Supabase Dashboard włączona jest opcja "Confirm email", użytkownik po rejestracji otrzyma email z linkiem weryfikacyjnym.
+
+**Przepływ:**
+1. Użytkownik rejestruje się przez `AuthForm`
+2. Supabase Auth tworzy konto z `email_confirmed_at = NULL`
+3. Supabase wysyła email weryfikacyjny z linkiem do `/auth/callback`
+4. Użytkownik klika link w emailu
+5. `/auth/callback` wymienia kod na sesję i ustawia `email_confirmed_at`
+6. Użytkownik jest przekierowany na stronę główną
+
+**Obsługa w AuthForm:**
+```typescript
+// Po signUp() sprawdź czy sesja została utworzona
+const { data, error } = await supabaseBrowser.auth.signUp({ ... });
+
+if (data.user && !data.session) {
+  // Email confirmation required
+  setSuccessMessage('Sprawdź swoją skrzynkę email, aby potwierdzić rejestrację');
+} else if (data.session) {
+  // No email confirmation, redirect immediately
+  window.location.href = '/';
+}
+```
+
+**Konfiguracja Supabase Dashboard:**
+- Authentication > Settings > Email > "Enable email confirmations"
+- Email Templates > Customize verification email template (język polski)
+
+---
 
 ## 5. Typy
 
@@ -182,6 +317,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 **Rejestracja (`mode === 'register'`):**
 
+Rejestracja wymaga dwuetapowego procesu zgodnie z US-001 ("System weryfikuje, czy nazwa użytkownika nie jest już zajęta"):
+
+**Krok 1: Walidacja unikalności username**
+- **Endpoint**: `POST /api/auth/check-username`
+- **Parametry**: `{ username: data.username }`
+- **Sukces (`available: true`)**: Przejście do kroku 2
+- **Błąd (`available: false`)**: Wyświetlenie komunikatu "Nazwa użytkownika jest już zajęta"
+
+**Krok 2: Utworzenie konta**
 - **Klient**: `supabaseBrowser` (browser client)
 - **Metoda**: `supabase.auth.signUp`
 - **Parametry**:
@@ -198,7 +342,52 @@ export const onRequest = defineMiddleware(async (context, next) => {
   ```
 - **Sukces z sesją**: Przekierowanie na stronę główną `/`
 - **Sukces bez sesji**: Informacja o konieczności potwierdzenia emaila (jeśli włączone w Supabase)
-- **Błąd**: Wyświetlenie komunikatu błędu (np. użytkownik już istnieje)
+- **Błąd**: Wyświetlenie komunikatu błędu (np. email już istnieje)
+
+**Przykładowa implementacja w komponencie:**
+
+```typescript
+const onSubmit = async (data: RegisterFormValues) => {
+  setIsLoading(true);
+  setServerError(null);
+
+  try {
+    // Krok 1: Sprawdzenie unikalności username
+    const checkResponse = await fetch('/api/auth/check-username', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: data.username }),
+    });
+
+    const checkResult = await checkResponse.json();
+
+    if (!checkResult.available) {
+      setServerError(checkResult.message || 'Nazwa użytkownika jest już zajęta');
+      setIsLoading(false);
+      return;
+    }
+
+    // Krok 2: Utworzenie konta w Supabase Auth
+    const { data: authData, error } = await supabaseBrowser.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: { data: { username: data.username } },
+    });
+
+    if (error) {
+      setServerError(mapSupabaseError(error.message));
+      return;
+    }
+
+    // Przekierowanie po sukcesie
+    window.location.href = '/';
+  } catch (err) {
+    setServerError('Wystąpił błąd. Spróbuj ponownie później.');
+  } finally {
+    setIsLoading(false);
+  }
+};
+```
 
 ### 7.4 Zasady użycia klientów
 
@@ -231,10 +420,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 - **Email**: Musi być poprawnym adresem e-mail.
 - **Hasło**: Minimum 6 znaków.
-- **Nazwa użytkownika**: Wymagana tylko przy rejestracji.
+- **Nazwa użytkownika**: Wymagana tylko przy rejestracji, minimum 3 znaki.
 - **Unikalność**:
-  - Email: Weryfikowany przez Supabase przy rejestracji (zwraca błąd, jeśli zajęty).
-  - Username: Powinien być weryfikowany. Jeśli Supabase zwróci błąd (np. z triggera bazy danych), należy go wyświetlić.
+  - **Email**: Weryfikowany przez Supabase Auth przy rejestracji (zwraca błąd `user_already_registered`, jeśli zajęty).
+  - **Username**: Weryfikowany przez endpoint `POST /api/auth/check-username` PRZED wywołaniem `signUp()`. Endpoint sprawdza unikalność w tabeli `profiles` z constraint UNIQUE na kolumnie `username`.
+
+**Kolejność walidacji przy rejestracji:**
+1. Walidacja client-side (Zod) - format email, długość hasła, długość username
+2. Walidacja server-side - unikalność username (`POST /api/auth/check-username`)
+3. Walidacja Supabase Auth - unikalność email, siła hasła
 
 ## 10. Obsługa błędów
 

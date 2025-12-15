@@ -16,7 +16,7 @@ This API design follows REST principles and is built on Astro 5 server-side rend
 
 ### 2.1 Authentication
 
-Authentication is handled entirely through **Supabase Auth SDK** on the client side. The API expects all requests to include a valid session token in the Authorization header.
+Authentication is handled through **Supabase Auth SDK** on the client side, with one server-side endpoint for username validation. The API expects all requests to include a valid session token in the Authorization header.
 
 **Session Management:**
 
@@ -27,14 +27,22 @@ Authentication is handled entirely through **Supabase Auth SDK** on the client s
 **Client-Side Auth Operations:**
 
 ```typescript
-// Registration - handled by Supabase Auth
-supabase.auth.signUp({
-  email: string,
-  password: string,
-  options: {
-    data: { username: string },
-  },
+// Registration - two-step process:
+// 1. Check username availability (server-side)
+// 2. Create account via Supabase Auth
+const checkResponse = await fetch('/api/auth/check-username', {
+  method: 'POST',
+  body: JSON.stringify({ username }),
 });
+if (checkResponse.ok && (await checkResponse.json()).available) {
+  supabase.auth.signUp({
+    email: string,
+    password: string,
+    options: {
+      data: { username: string },
+    },
+  });
+}
 
 // Login - handled by Supabase Auth
 supabase.auth.signInWithPassword({
@@ -45,6 +53,58 @@ supabase.auth.signInWithPassword({
 // Logout - handled by Supabase Auth
 supabase.auth.signOut();
 ```
+
+---
+
+#### POST /api/auth/check-username
+
+**Description:** Check if a username is available for registration. Required to fulfill US-001 requirement: "System weryfikuje, czy nazwa użytkownika nie jest już zajęta."
+
+**Authentication:** Not required (public endpoint for registration flow)
+
+**Request Body:**
+
+```json
+{
+  "username": "johndoe"
+}
+```
+
+**Validation Rules:**
+
+- `username`: Required, minimum 3 characters
+
+**Response Body (Success):**
+
+```json
+{
+  "available": true
+}
+```
+
+**Response Body (Username taken):**
+
+```json
+{
+  "available": false,
+  "message": "Nazwa użytkownika jest już zajęta"
+}
+```
+
+**Success Response:**
+
+- **Code:** 200 OK
+
+**Error Responses:**
+
+- **Code:** 400 Bad Request
+  - **Message:** `{ "available": false, "message": "Nazwa użytkownika musi mieć co najmniej 3 znaki" }`
+
+**Implementation Notes:**
+
+- Queries `profiles` table with UNIQUE constraint on `username`
+- Case-insensitive comparison recommended for better UX
+- Should be called before `signUp()` in registration flow
 
 ### 2.2 Tournaments
 

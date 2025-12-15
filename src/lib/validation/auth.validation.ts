@@ -41,3 +41,35 @@ export type AuthFormValues = LoginFormValues | RegisterFormValues;
  * Auth mode type - determines whether form is in login or register mode
  */
 export type AuthMode = "login" | "register";
+
+/**
+ * Schema for forgot password form validation
+ * Only requires email
+ */
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Nieprawidłowy adres email"),
+});
+
+/**
+ * Type for forgot password form values
+ */
+export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+
+/**
+ * Schema for reset password form validation
+ * Requires password and confirmPassword with matching validation
+ */
+export const resetPasswordSchema = z
+  .object({
+    password: z.string().min(6, "Hasło musi mieć minimum 6 znaków"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Hasła muszą być identyczne",
+    path: ["confirmPassword"],
+  });
+
+/**
+ * Type for reset password form values
+ */
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;

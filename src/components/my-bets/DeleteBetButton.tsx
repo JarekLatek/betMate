@@ -31,13 +31,17 @@ export function DeleteBetButton({ onDelete, isDeleting = false, disabled = false
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button
-          variant="ghost"
+          variant="delete"
           size="sm"
           disabled={disabled || isDeleting}
-          className="text-muted-foreground hover:text-destructive"
+          className="text-background"
           aria-label="Usuń zakład"
         >
-          {isDeleting ? <Loader2Icon className="size-4 animate-spin" /> : <Trash2Icon className="size-4" />}
+          {isDeleting ? (
+            <Loader2Icon className="size-4 animate-spin" />
+          ) : (
+            <Trash2Icon className="size-4 group-hover:text-destructive transition-colors" />
+          )}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

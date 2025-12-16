@@ -19,23 +19,25 @@ export function MatchInfo({ match }: MatchInfoProps) {
   const hasScore = match.home_score !== null && match.away_score !== null;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col items-center gap-2">
+      {/* Drużyny */}
       <div className="flex items-center gap-2">
         <span className="font-medium">{match.home_team}</span>
         <span className="text-muted-foreground">vs</span>
         <span className="font-medium">{match.away_team}</span>
       </div>
-      <div className="text-muted-foreground flex items-center gap-2 text-sm">
+
+      {/* Data */}
+      <div className="text-muted-foreground text-sm">
         <span>{formatMatchDate(match.match_datetime)}</span>
-        {hasScore && (
-          <>
-            <span>•</span>
-            <span className="font-semibold tabular-nums">
-              {match.home_score} : {match.away_score}
-            </span>
-          </>
-        )}
       </div>
+
+      {/* Wynik (jeśli jest) */}
+      {hasScore && (
+        <div className="text-lg font-bold tabular-nums">
+          {match.home_score} : {match.away_score}
+        </div>
+      )}
     </div>
   );
 }

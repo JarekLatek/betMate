@@ -7,6 +7,8 @@ import type { MatchOutcome } from "@/types";
 interface BetOutcomeProps {
   pickedResult: MatchOutcome;
   status: BetDisplayStatus;
+  showOnlyStatus?: boolean;
+  showOnlyPrediction?: boolean;
 }
 
 const statusConfig: Record<
@@ -38,15 +40,47 @@ const statusConfig: Record<
   },
 };
 
-export function BetOutcome({ pickedResult, status }: BetOutcomeProps) {
+export function BetOutcome({
+  pickedResult,
+  status,
+  showOnlyStatus = false,
+  showOnlyPrediction = false,
+}: BetOutcomeProps) {
   const config = statusConfig[status];
   const Icon = config.icon;
 
+  // Pokaż tylko status (lewa strona)
+  if (showOnlyStatus) {
+    return (
+      <div className="flex items-center gap-1">
+        <Icon className={cn("size-4", config.iconClass)} />
+        <span className={cn("text-sm", config.iconClass)}>{config.label}</span>
+      </div>
+    );
+  }
+
+  // Pokaż tylko obstawienie (prawa strona)
+  if (showOnlyPrediction) {
+    return (
+      <div className="flex items-center gap-1">
+        <span className="text-muted-foreground text-sm">Twój typ:</span>
+        <Badge variant="outline" className="text-base font-bold" title={getResultDescription(pickedResult)}>
+          {getResultLabel(pickedResult)}
+        </Badge>
+      </div>
+    );
+  }
+
+  // Domyślnie pokaż wszystko (dla kompatybilności wstecznej)
   return (
-    <div className="flex flex-col items-end gap-1">
-      <Badge variant="outline" className="text-base font-bold" title={getResultDescription(pickedResult)}>
-        {getResultLabel(pickedResult)}
-      </Badge>
+    <div className="flex flex-col items-end gap-2">
+      <div className="flex items-center gap-1">
+        <span className="text-muted-foreground text-xs">Twój typ:</span>
+        <Badge variant="outline" className="text-base font-bold" title={getResultDescription(pickedResult)}>
+          {getResultLabel(pickedResult)}
+        </Badge>
+      </div>
+
       <div className="flex items-center gap-1">
         <Icon className={cn("size-4", config.iconClass)} />
         <span className={cn("text-xs", config.iconClass)}>{config.label}</span>

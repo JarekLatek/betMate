@@ -1,5 +1,14 @@
 import { useMemo } from "react";
-import { CalendarIcon, ClockIcon, AlertTriangleIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  ClockIcon,
+  AlertTriangleIcon,
+  BellRing,
+  Gamepad2,
+  Trophy,
+  TimerReset,
+  TimerOff,
+} from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BettingControls } from "./BettingControls";
 import { MatchResult } from "./MatchResult";
@@ -39,20 +48,20 @@ function formatMatchDate(dateString: string): { date: string; time: string; isTo
   return { date, time, isToday };
 }
 
-function getStatusLabel(status: MatchDTO["status"]): string {
+function getStatusIcon(status: MatchDTO["status"]) {
   switch (status) {
     case "SCHEDULED":
-      return "Zaplanowany";
+      return BellRing;
     case "IN_PLAY":
-      return "W trakcie";
+      return Gamepad2;
     case "FINISHED":
-      return "Zakończony";
+      return Trophy;
     case "POSTPONED":
-      return "Przełożony";
+      return TimerReset;
     case "CANCELED":
-      return "Odwołany";
+      return TimerOff;
     default:
-      return status;
+      return BellRing;
   }
 }
 
@@ -88,15 +97,17 @@ export function MatchCard({ match, onBet, isLoading = false, loadingPrediction =
           </div>
           <div
             className={cn(
-              "rounded-full px-2 py-0.5 text-xs font-medium",
-              match.status === "SCHEDULED" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-              match.status === "IN_PLAY" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-              match.status === "FINISHED" && "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
-              (match.status === "POSTPONED" || match.status === "CANCELED") &&
-                "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+              "flex items-center",
+              match.status === "SCHEDULED" && "text-blue-700 dark:text-blue-400",
+              match.status === "IN_PLAY" && "text-green-700 dark:text-green-400",
+              match.status === "FINISHED" && "text-gray-700 dark:text-gray-400",
+              (match.status === "POSTPONED" || match.status === "CANCELED") && "text-yellow-700 dark:text-yellow-400"
             )}
           >
-            {getStatusLabel(match.status)}
+            {(() => {
+              const StatusIcon = getStatusIcon(match.status);
+              return <StatusIcon className="size-6" />;
+            })()}
           </div>
         </div>
       </CardHeader>

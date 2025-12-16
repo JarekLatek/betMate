@@ -58,7 +58,8 @@ export function ForgotPasswordForm() {
 
   return (
     <Card className="mx-auto w-full max-w-md">
-      <CardHeader>
+      <CardHeader className="flex flex-col items-center text-center">
+        <img src="/betMate.svg" alt="betMate" className="mb-4 h-12" />
         <CardTitle>Odzyskiwanie hasła</CardTitle>
         <CardDescription>
           Podaj adres email powiązany z Twoim kontem, a wyślemy Ci link do zresetowania hasła.
@@ -88,7 +89,13 @@ export function ForgotPasswordForm() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="twoj@email.pl" {...field} disabled={isLoading} />
+                    <Input
+                      type="email"
+                      placeholder="twoj@email.pl"
+                      autoComplete="email"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

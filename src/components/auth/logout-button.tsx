@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LogOut } from "lucide-react";
 import { supabaseBrowser } from "@/db/supabase.browser";
 import { Button } from "@/components/ui/button";
 
@@ -19,8 +20,9 @@ export function LogoutButton() {
   };
 
   return (
-    <Button onClick={handleLogout} disabled={isLoading} variant="outline">
-      {isLoading ? "Wylogowywanie..." : "Wyloguj się"}
+    <Button onClick={handleLogout} disabled={isLoading} variant="ghost" size="icon" aria-label="Wyloguj się">
+      {/* {isLoading ? "Wylogowywanie..." : "Wyloguj się"} */}
+      <LogOut className="h-5 w-5" />
     </Button>
   );
 }

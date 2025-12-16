@@ -126,7 +126,8 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <Card className="mx-auto w-full max-w-md">
-      <CardHeader>
+      <CardHeader className="flex flex-col items-center text-center">
+        <img src="/betMate.svg" alt="betMate" className="mb-4 h-12" />
         <CardTitle>{isRegisterMode ? "Rejestracja" : "Logowanie"}</CardTitle>
         <CardDescription>
           {isRegisterMode ? "Utwórz nowe konto, aby rozpocząć typowanie" : "Zaloguj się do swojego konta"}
@@ -150,7 +151,13 @@ export function AuthForm({ mode }: AuthFormProps) {
                   <FormItem>
                     <FormLabel>Nazwa użytkownika</FormLabel>
                     <FormControl>
-                      <Input placeholder="jan_kowalski" {...field} disabled={isLoading} value={field.value ?? ""} />
+                      <Input
+                        placeholder="jan_kowalski"
+                        autoComplete="username"
+                        {...field}
+                        disabled={isLoading}
+                        value={field.value ?? ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -165,7 +172,13 @@ export function AuthForm({ mode }: AuthFormProps) {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="twoj@email.pl" {...field} disabled={isLoading} />
+                    <Input
+                      type="email"
+                      placeholder="twoj@email.pl"
+                      autoComplete="email"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -179,7 +192,13 @@ export function AuthForm({ mode }: AuthFormProps) {
                 <FormItem>
                   <FormLabel>Hasło</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      autoComplete={isRegisterMode ? "new-password" : "current-password"}
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

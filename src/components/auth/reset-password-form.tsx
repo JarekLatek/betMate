@@ -66,7 +66,8 @@ export function ResetPasswordForm() {
 
   return (
     <Card className="mx-auto w-full max-w-md">
-      <CardHeader>
+      <CardHeader className="flex flex-col items-center text-center">
+        <img src="/betMate.svg" alt="betMate" className="mb-4 h-12" />
         <CardTitle>Ustaw nowe hasło</CardTitle>
         <CardDescription>Wprowadź nowe hasło dla swojego konta.</CardDescription>
       </CardHeader>
@@ -94,7 +95,13 @@ export function ResetPasswordForm() {
                 <FormItem>
                   <FormLabel>Nowe hasło</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -108,7 +115,13 @@ export function ResetPasswordForm() {
                 <FormItem>
                   <FormLabel>Potwierdź hasło</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      {...field}
+                      disabled={isLoading}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

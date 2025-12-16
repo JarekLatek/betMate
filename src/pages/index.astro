@@ -29,16 +29,12 @@ try {
     <!-- Top bar with user info -->
     <div class="border-b">
       <div class="container mx-auto flex items-center justify-between px-4 py-2">
-        <div class="flex items-center gap-4">
-          <img src="/betMate.svg" alt="betMate" class="h-8" />
-          <nav class="flex items-center gap-2">
-            <span class="text-sm font-medium">Mecze</span>
-            <span class="text-muted-foreground">/</span>
-            <a href="/my-bets" class="text-muted-foreground hover:text-foreground text-sm">Moje zakłady</a>
-            <span class="text-muted-foreground">/</span>
-            <a href="/leaderboard" class="text-muted-foreground hover:text-foreground text-sm">Ranking</a>
-          </nav>
-        </div>
+        <img src="/betMate.svg" alt="betMate" class="h-8" />
+        <nav class="flex items-center gap-6">
+          <span class="text-sm font-medium">Mecze</span>
+          <a href="/my-bets" class="text-muted-foreground hover:text-primary text-sm">Moje zakłady</a>
+          <a href="/leaderboard" class="text-muted-foreground hover:text-primary text-sm">Ranking</a>
+        </nav>
         <div class="flex items-center gap-2">
           <span class="text-muted-foreground text-sm">{username}</span>
           <LogoutButton client:load />

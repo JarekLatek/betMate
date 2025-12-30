@@ -36,6 +36,13 @@ betMate is a web application designed to streamline the process of organizing ca
   - **Authentication**: Supabase Auth
   - **Serverless Functions**: Supabase Edge Functions
 
+### Testing
+
+- **Unit Tests**: [Vitest](https://vitest.dev/)
+- **E2E Tests**: [Playwright](https://playwright.dev/)
+- **Component Testing**: [Testing Library](https://testing-library.com/)
+- **Mocking**: [MSW](https://mswjs.io/)
+
 ### DevOps & Tooling
 
 - **CI/CD**: [GitHub Actions](https://github.com/features/actions)
@@ -97,6 +104,12 @@ The following scripts are available in the `package.json`:
 - `npm run lint`: Lints the codebase using ESLint.
 - `npm run lint:fix`: Automatically fixes linting issues.
 - `npm run format`: Formats the code using Prettier.
+- `npm run test`: Runs unit tests with Vitest.
+- `npm run test:watch`: Runs unit tests in watch mode.
+- `npm run test:ui`: Opens Vitest UI for interactive testing.
+- `npm run test:coverage`: Runs unit tests with coverage report.
+- `npm run test:e2e`: Runs E2E tests with Playwright.
+- `npm run test:e2e:ui`: Opens Playwright UI for interactive E2E testing.
 
 ## Project Scope
 

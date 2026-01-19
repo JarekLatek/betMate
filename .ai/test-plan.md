@@ -71,6 +71,503 @@ Niniejszy dokument definiuje kompleksowy plan testów dla aplikacji betMate - pl
 | Error Mapper | `src/lib/utils/error-mapper.ts` | Średni |
 | Bet Utils | `src/lib/utils/bet-utils.ts` | Wysoki |
 
+#### 3.1.1 Unit Tests - BetService
+
+**Cel:** Weryfikacja logiki biznesowej serwisu zakładów w izolacji od bazy danych.
+
+**Strategia mockowania:**
+- Mockowanie `SupabaseClient` z kontrolowanymi odpowiedziami
+- Mockowanie `Date` dla testów walidacji czasowej
+- Testowanie wszystkich ścieżek błędów i edge cases
+
+**Test Cases:**
+
+##### TC-BET-UNIT-001: createBet() - Poprawne utworzenie zakładu
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock Supabase zwraca sukces |
+| **Kroki** | 1. Wywołanie `createBet(userId, command)` |
+| **Oczekiwany rezultat** | Zwrócony obiekt BetEntity z poprawnym mapowaniem pól |
+| **Dane testowe** | `userId: "user-123"`, `command: { match_id: 1, picked_result: "HOME_WIN" }` |
+
+##### TC-BET-UNIT-002: createBet() - Propagacja błędu z bazy danych
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock Supabase zwraca error (constraint violation) |
+| **Kroki** | 1. Wywołanie `createBet()` |
+| **Oczekiwany rezultat** | Error z Supabase zostaje przekazany (thrown) |
+| **Dane testowe** | Error z kodem `23505` (unique violation) |
+
+##### TC-BET-UNIT-003: updateBet() - Zakład nie istnieje
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca error PGRST116 (not found) |
+| **Kroki** | 1. Wywołanie `updateBet(999, userId, command)` |
+| **Oczekiwany rezultat** | `{ success: false, error: "Bet not found", status: 404 }` |
+
+##### TC-BET-UNIT-004: updateBet() - Zakład należy do innego użytkownika
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | RLS policy blokuje dostęp (PGRST116) |
+| **Kroki** | 1. Wywołanie `updateBet(betId, "different-user", command)` |
+| **Oczekiwany rezultat** | `{ success: false, error: "Bet not found", status: 404 }` |
+
+##### TC-BET-UNIT-005: updateBet() - Mecz nie ma statusu SCHEDULED
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca zakład z meczem o statusie `IN_PLAY` |
+| **Kroki** | 1. Wywołanie `updateBet()` |
+| **Oczekiwany rezultat** | `{ success: false, error: "Cannot modify this bet", reason: "Match is not scheduled", status: 403 }` |
+
+##### TC-BET-UNIT-006: updateBet() - Mecz rozpoczyna się za mniej niż 5 minut
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca mecz o `match_datetime` za 4 minuty, mockowany `Date.now()` |
+| **Kroki** | 1. Wywołanie `updateBet()` |
+| **Oczekiwany rezultat** | `{ success: false, error: "Cannot modify this bet", reason: "Match starts in less than 5 minutes", status: 403 }` |
+
+##### TC-BET-UNIT-007: updateBet() - Edge case: dokładnie 5 minut przed meczem
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | `match_datetime - now = 300000ms` (dokładnie 5 minut) |
+| **Kroki** | 1. Wywołanie `updateBet()` |
+| **Oczekiwany rezultat** | `{ success: false, status: 403 }` - warunek `<=` w linii 147 |
+| **Uwaga** | Weryfikacja granicznego warunku w logice biznesowej |
+
+##### TC-BET-UNIT-008: updateBet() - Edge case: 5 minut i 1ms przed meczem
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | `match_datetime - now = 300001ms` |
+| **Kroki** | 1. Wywołanie `updateBet()` |
+| **Oczekiwany rezultat** | `{ success: true, data: updatedBet }` - zakład zaktualizowany |
+
+##### TC-BET-UNIT-009: updateBet() - Poprawna aktualizacja
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mecz SCHEDULED, >5 min do rozpoczęcia, zakład należy do użytkownika |
+| **Kroki** | 1. Wywołanie `updateBet()` ze zmienionym `picked_result` |
+| **Oczekiwany rezultat** | `{ success: true, data: BetEntity }` z nowym `picked_result` |
+
+##### TC-BET-UNIT-010: updateBet() - Nieoczekiwany błąd w catch block
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock rzuca niestandardowy exception |
+| **Kroki** | 1. Wywołanie `updateBet()` |
+| **Oczekiwany rezultat** | `{ success: false, error: "Internal server error", status: 500 }` |
+
+##### TC-BET-UNIT-011: deleteBet() - Mecz nie ma statusu SCHEDULED
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca zakład z meczem o statusie `FINISHED` |
+| **Kroki** | 1. Wywołanie `deleteBet(betId, userId)` |
+| **Oczekiwany rezultat** | `{ success: false, error: "Cannot delete this bet", reason: "Match is not scheduled", status: 403 }` |
+
+##### TC-BET-UNIT-012: deleteBet() - Mecz rozpoczyna się za mniej niż 5 minut
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca mecz za 3 minuty |
+| **Kroki** | 1. Wywołanie `deleteBet()` |
+| **Oczekiwany rezultat** | `{ success: false, error: "Cannot delete this bet", reason: "Match starts in less than 5 minutes", status: 403 }` |
+
+##### TC-BET-UNIT-013: deleteBet() - Poprawne usunięcie
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Wszystkie warunki spełnione, mock zwraca sukces |
+| **Kroki** | 1. Wywołanie `deleteBet()` |
+| **Oczekiwany rezultat** | `{ success: true }` |
+
+##### TC-BET-UNIT-014: getUserBets() - Podstawowe pobranie bez filtrów
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca listę zakładów z zagnieżdżonymi meczami |
+| **Kroki** | 1. Wywołanie `getUserBets(userId, {})` |
+| **Oczekiwany rezultat** | `{ data: BetWithMatchDTO[], pagination: { total, limit: 50, offset: 0, has_more } }` |
+
+##### TC-BET-UNIT-015: getUserBets() - Filtrowanie po tournament_id
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock ma zakłady z różnych turniejów |
+| **Kroki** | 1. Wywołanie `getUserBets(userId, { tournament_id: 1 })` |
+| **Oczekiwany rezultat** | Query builder zawiera `.eq("match.tournament_id", 1)` |
+| **Weryfikacja** | Spy na metodzie `.eq()` Supabase mocka |
+
+##### TC-BET-UNIT-016: getUserBets() - Filtrowanie po match_id
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock ma zakłady na różne mecze |
+| **Kroki** | 1. Wywołanie `getUserBets(userId, { match_id: 42 })` |
+| **Oczekiwany rezultat** | Query builder zawiera `.eq("match_id", 42)` |
+
+##### TC-BET-UNIT-017: getUserBets() - Kombinacja filtrów
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Zakłady na różne mecze i turnieje |
+| **Kroki** | 1. Wywołanie `getUserBets(userId, { tournament_id: 1, match_id: 42 })` |
+| **Oczekiwany rezultat** | Oba filtry zastosowane (`.eq()` wywołane dwukrotnie) |
+
+##### TC-BET-UNIT-018: getUserBets() - Kalkulacja has_more = true
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca `count: 100`, parametry `limit: 50, offset: 0` |
+| **Kroki** | 1. Wywołanie `getUserBets()` |
+| **Oczekiwany rezultat** | `pagination.has_more === true` (0 + 50 < 100) |
+
+##### TC-BET-UNIT-019: getUserBets() - Kalkulacja has_more = false
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca `count: 100`, parametry `limit: 50, offset: 50` |
+| **Kroki** | 1. Wywołanie `getUserBets()` |
+| **Oczekiwany rezultat** | `pagination.has_more === false` (50 + 50 = 100) |
+
+##### TC-BET-UNIT-020: getUserBets() - Edge case: ostatnia strona z resztą
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca `count: 75`, parametry `limit: 50, offset: 50` |
+| **Kroki** | 1. Wywołanie `getUserBets()` |
+| **Oczekiwany rezultat** | `pagination: { total: 75, has_more: false }`, `data.length <= 25` |
+
+##### TC-BET-UNIT-021: getUserBets() - Obsługa błędu bazy danych
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock Supabase zwraca error |
+| **Kroki** | 1. Wywołanie `getUserBets()` |
+| **Oczekiwany rezultat** | Rzucony Error z message "Failed to fetch bets" |
+| **Weryfikacja** | Log w konsoli zawiera szczegóły błędu (linia 372-378) |
+
+##### TC-BET-UNIT-022: getUserBets() - Domyślne wartości parametrów
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | - |
+| **Kroki** | 1. Wywołanie `getUserBets(userId, {})` bez limit/offset |
+| **Oczekiwany rezultat** | Query używa `.range(0, 49)` (limit=50, offset=0) |
+
+**Metryki pokrycia:**
+- **Branch coverage:** 100% (wszystkie ścieżki if/else)
+- **Line coverage:** ~95% (pominięte tylko logi konsoli)
+- **Edge cases:** Granice czasowe (5 min), paginacja (ostatnia strona), puste wyniki
+
+**Uwagi implementacyjne:**
+1. Użyć `vi.spyOn()` do monitorowania wywołań query buildera Supabase
+2. Mockować `Date` za pomocą `vi.useFakeTimers()` dla testów walidacji czasowej
+3. Testować type casting w liniach 126-130 i 262-266 (match object)
+4. Weryfikować logi konsoli w testach błędów (linie 99, 169, 235, 297, 310, 372)
+
+#### 3.1.2 Unit Tests - ScoringService
+
+**Cel:** Weryfikacja logiki naliczania punktów za trafione prognozy w izolacji od bazy danych.
+
+**Strategia mockowania:**
+- Mockowanie `SupabaseClient` z kontrolowanymi odpowiedziami dla wszystkich operacji DB
+- Testowanie wszystkich ścieżek błędów i edge cases
+- Weryfikacja wywołań metod Supabase (liczba, parametry, kolejność)
+- Mockowanie scenariuszy: puste wyniki, błędy bazy, wielokrotne mecze
+
+**Test Cases:**
+
+##### TC-SCORE-UNIT-001: scoreMatches() - Brak meczów do zescorowania
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock `getUnscoredMatches()` zwraca pustą tablicę |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase)` |
+| **Oczekiwany rezultat** | `{ processed_matches: 0, updated_scores: 0, errors: [] }` |
+| **Weryfikacja** | `upsertScore()` i `markMatchAsScored()` nie zostają wywołane |
+
+##### TC-SCORE-UNIT-002: scoreMatches() - Jeden mecz, wszystkie zakłady poprawne
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca 1 mecz (`result: "HOME_WIN"`), 3 zakłady z `picked_result: "HOME_WIN"` |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase)` |
+| **Oczekiwany rezultat** | `{ processed_matches: 1, updated_scores: 3, errors: [] }` |
+| **Weryfikacja** | `upsertScore()` wywołane 3 razy z `POINTS_FOR_CORRECT_BET = 3` |
+| **Dane testowe** | Match: `{ id: 1, tournament_id: 10, result: "HOME_WIN" }` <br> Bets: `[{ id: 1, user_id: "u1", picked_result: "HOME_WIN" }, ...]` |
+
+##### TC-SCORE-UNIT-003: scoreMatches() - Jeden mecz, mieszane wyniki
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca 1 mecz (`result: "DRAW"`), 5 zakładów: 2x DRAW, 2x HOME_WIN, 1x AWAY_WIN |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase)` |
+| **Oczekiwany rezultat** | `{ processed_matches: 1, updated_scores: 2, errors: [] }` |
+| **Weryfikacja** | `upsertScore()` wywołane tylko 2 razy (dla zakładów z DRAW) |
+
+##### TC-SCORE-UNIT-004: scoreMatches() - Wiele meczów, różne turnieje
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca 3 mecze z różnych turniejów (tournament_id: 1, 2, 1) |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase)` |
+| **Oczekiwany rezultat** | `processed_matches: 3`, punkty dodane do odpowiednich turniejów |
+| **Weryfikacja** | `upsertScore()` wywołane z poprawnymi `tournament_id` dla każdego zakładu |
+
+##### TC-SCORE-UNIT-005: scoreMatches() - Tryb dryRun = true
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca 2 mecze z zakładami do zescorowania |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase, dryRun = true)` |
+| **Oczekiwany rezultat** | `{ processed_matches: 2, updated_scores: X, errors: [] }` z poprawnymi statystykami |
+| **Weryfikacja** | `upsertScore()` NIE zostaje wywołane, `markMatchAsScored()` NIE zostaje wywołane |
+| **Uwaga** | Tylko analiza, brak zapisu do bazy |
+
+##### TC-SCORE-UNIT-006: scoreMatches() - Tryb dryRun = false (domyślny)
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca 1 mecz z 1 poprawnym zakładem |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase)` bez drugiego parametru |
+| **Oczekiwany rezultat** | `{ processed_matches: 1, updated_scores: 1, errors: [] }` |
+| **Weryfikacja** | `upsertScore()` i `markMatchAsScored()` zostają wywołane |
+
+##### TC-SCORE-UNIT-007: scoreMatches() - Błąd w jednym meczu, kontynuacja przetwarzania
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca 3 mecze, `getBetsForMatch()` rzuca błąd dla meczu #2 |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase)` |
+| **Oczekiwany rezultat** | `{ processed_matches: 2, updated_scores: X, errors: ["Failed to fetch bets for match 2: ..."] }` |
+| **Weryfikacja** | Mecze #1 i #3 przetworzone pomyślnie, błąd w `errors` array |
+
+##### TC-SCORE-UNIT-008: scoreMatches() - Błąd w upsertScore, kontynuacja
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | `upsertScore()` rzuca błąd dla jednego użytkownika |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase)` |
+| **Oczekiwany rezultat** | Błąd dodany do `errors`, pozostałe zakłady przetworzone |
+| **Weryfikacja** | Pętla nie przerywa się, wszystkie mecze w `unscoredMatches` przetwarzane |
+
+##### TC-SCORE-UNIT-009: scoreMatches() - Mecz bez zakładów
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca mecz, `getBetsForMatch()` zwraca pustą tablicę |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase)` |
+| **Oczekiwany rezultat** | `{ processed_matches: 1, updated_scores: 0, errors: [] }` |
+| **Weryfikacja** | `markMatchAsScored()` wywołane pomimo braku zakładów |
+
+##### TC-SCORE-UNIT-010: scoreMatches() - Weryfikacja kolejności operacji
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca 1 mecz z zakładami |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase)` |
+| **Oczekiwany rezultat** | Operacje wykonane w kolejności: `getUnscoredMatches → getBetsForMatch → upsertScore(s) → markMatchAsScored` |
+| **Weryfikacja** | Spy weryfikuje kolejność wywołań metod mocka |
+
+##### TC-SCORE-UNIT-011: getUnscoredMatches() - Poprawne pobranie
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock Supabase zwraca 2 mecze FINISHED, is_scored=false, result not null |
+| **Kroki** | 1. Wywołanie `getUnscoredMatches(supabase)` |
+| **Oczekiwany rezultat** | Zwrócona tablica 2 obiektów `UnscoredMatch[]` |
+| **Weryfikacja** | Query builder: `.eq("status", "FINISHED")`, `.eq("is_scored", false)`, `.not("result", "is", null)` |
+
+##### TC-SCORE-UNIT-012: getUnscoredMatches() - Brak meczów
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock Supabase zwraca `{ data: null, error: null }` |
+| **Kroki** | 1. Wywołanie `getUnscoredMatches(supabase)` |
+| **Oczekiwany rezultat** | Zwrócona pusta tablica `[]` (linia 34: `data || []`) |
+
+##### TC-SCORE-UNIT-013: getUnscoredMatches() - Błąd bazy danych
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock Supabase zwraca `{ data: null, error: { message: "Connection timeout" } }` |
+| **Kroki** | 1. Wywołanie `getUnscoredMatches(supabase)` |
+| **Oczekiwany rezultat** | Rzucony Error: `"Failed to fetch unscored matches: Connection timeout"` |
+
+##### TC-SCORE-UNIT-014: getBetsForMatch() - Poprawne pobranie zakładów
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca 3 zakłady dla match_id=42 |
+| **Kroki** | 1. Wywołanie `getBetsForMatch(supabase, 42)` |
+| **Oczekiwany rezultat** | Zwrócona tablica 3 obiektów `BetToScore[]` |
+| **Weryfikacja** | Query builder: `.select("id, user_id, picked_result")`, `.eq("match_id", 42)` |
+
+##### TC-SCORE-UNIT-015: getBetsForMatch() - Brak zakładów na mecz
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca `{ data: [], error: null }` |
+| **Kroki** | 1. Wywołanie `getBetsForMatch(supabase, 99)` |
+| **Oczekiwany rezultat** | Zwrócona pusta tablica `[]` |
+
+##### TC-SCORE-UNIT-016: getBetsForMatch() - Błąd bazy danych
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca error |
+| **Kroki** | 1. Wywołanie `getBetsForMatch(supabase, 1)` |
+| **Oczekiwany rezultat** | Rzucony Error: `"Failed to fetch bets for match 1: ..."` |
+
+##### TC-SCORE-UNIT-017: upsertScore() - Nowy użytkownik (brak poprzedniego wyniku)
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock `.single()` zwraca `{ data: null, error: null }` (brak rekordu) |
+| **Kroki** | 1. Wywołanie `upsertScore(supabase, "user123", 10, 3)` |
+| **Oczekiwany rezultat** | Upsert z `points: 3` (0 + 3) |
+| **Weryfikacja** | `.upsert({ user_id: "user123", tournament_id: 10, points: 3, ... })` |
+
+##### TC-SCORE-UNIT-018: upsertScore() - Istniejący wynik (kumulacja punktów)
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock `.single()` zwraca `{ data: { points: 6 }, error: null }` |
+| **Kroki** | 1. Wywołanie `upsertScore(supabase, "user123", 10, 3)` |
+| **Oczekiwany rezultat** | Upsert z `points: 9` (6 + 3) |
+| **Weryfikacja** | Logika w linii 67: `(existing?.points || 0) + pointsToAdd` |
+
+##### TC-SCORE-UNIT-019: upsertScore() - Edge case: użytkownik ma 0 punktów
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock zwraca `{ data: { points: 0 }, error: null }` |
+| **Kroki** | 1. Wywołanie `upsertScore(supabase, "user123", 10, 3)` |
+| **Oczekiwany rezultat** | Upsert z `points: 3` (0 + 3) |
+
+##### TC-SCORE-UNIT-020: upsertScore() - Weryfikacja conflict strategy
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | - |
+| **Kroki** | 1. Wywołanie `upsertScore(supabase, "user123", 10, 3)` |
+| **Oczekiwany rezultat** | Upsert wywołany z `{ onConflict: "user_id,tournament_id" }` (linia 77) |
+| **Weryfikacja** | Spy na `.upsert()` weryfikuje drugi parametr |
+
+##### TC-SCORE-UNIT-021: upsertScore() - Weryfikacja updated_at timestamp
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock `Date` z ustalonym czasem |
+| **Kroki** | 1. Wywołanie `upsertScore(supabase, "user123", 10, 3)` |
+| **Oczekiwany rezultat** | Pole `updated_at` ustawione na aktualny ISO timestamp |
+| **Weryfikacja** | `updated_at: new Date().toISOString()` w linii 74 |
+
+##### TC-SCORE-UNIT-022: upsertScore() - Błąd podczas upsert
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock `.upsert()` zwraca error (np. constraint violation) |
+| **Kroki** | 1. Wywołanie `upsertScore(supabase, "user123", 10, 3)` |
+| **Oczekiwany rezultat** | Rzucony Error: `"Failed to upsert score for user user123: ..."` |
+
+##### TC-SCORE-UNIT-023: upsertScore() - Błąd podczas fetch istniejącego wyniku (nie blokuje)
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock `.single()` zwraca error (ignorowany - linia 60 bez `if (error)`) |
+| **Kroki** | 1. Wywołanie `upsertScore(supabase, "user123", 10, 3)` |
+| **Oczekiwany rezultat** | Kontynuacja z `newPoints = 0 + 3`, upsert wykonany |
+| **Uwaga** | Błąd fetch nie przerywa procesu (graceful degradation) |
+
+##### TC-SCORE-UNIT-024: markMatchAsScored() - Poprawne oznaczenie
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock `.update()` zwraca sukces |
+| **Kroki** | 1. Wywołanie `markMatchAsScored(supabase, 42)` |
+| **Oczekiwany rezultat** | Zwrócona Promise resolve (void) |
+| **Weryfikacja** | `.update({ is_scored: true })`, `.eq("id", 42)` |
+
+##### TC-SCORE-UNIT-025: markMatchAsScored() - Błąd podczas update
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | Mock `.update()` zwraca error |
+| **Kroki** | 1. Wywołanie `markMatchAsScored(supabase, 42)` |
+| **Oczekiwany rezultat** | Rzucony Error: `"Failed to mark match 42 as scored: ..."` |
+
+##### TC-SCORE-UNIT-026: scoreMatches() - Agregacja statystyk z wielu meczów
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | 3 mecze: mecz #1 (2 trafienia), mecz #2 (0 trafień), mecz #3 (1 trafienie) |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase)` |
+| **Oczekiwany rezultat** | `{ processed_matches: 3, updated_scores: 3, errors: [] }` |
+| **Weryfikacja** | Licznik `updated_scores` kumulowany prawidłowo (linia 130) |
+
+##### TC-SCORE-UNIT-027: scoreMatches() - Weryfikacja POINTS_FOR_CORRECT_BET
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | 1 mecz, 1 poprawny zakład |
+| **Kroki** | 1. Wywołanie `scoreMatches(supabase)` |
+| **Oczekiwany rezultat** | `upsertScore()` wywołane z `pointsToAdd = 3` (linia 5: `const POINTS_FOR_CORRECT_BET = 3`) |
+| **Weryfikacja** | Spy weryfikuje trzeci parametr wywołania |
+
+##### TC-SCORE-UNIT-028: scoreMatches() - Różne typy MatchOutcome
+
+| Element | Opis |
+|---------|------|
+| **Warunek wstępny** | 3 mecze z różnymi wynikami: HOME_WIN, AWAY_WIN, DRAW |
+| **Kroki** | 1. Każdy mecz ma zakłady na wszystkie 3 opcje |
+| **Oczekiwany rezultat** | Tylko zakłady zgodne z `match.result` naliczają punkty |
+| **Weryfikacja** | Warunek w linii 126: `bet.picked_result === match.result` |
+
+**Metryki pokrycia:**
+- **Line coverage:** 100% (wszystkie linie kodu wykonane)
+- **Branch coverage:** 100% (wszystkie ścieżki if/else, błędy i sukcesy)
+- **Function coverage:** 100% (wszystkie 5 funkcji)
+- **Edge cases:** Puste tablice, null/undefined, błędy na każdym etapie, tryb dryRun, kumulacja punktów
+
+**Uwagi implementacyjne:**
+1. **Mockowanie Supabase Client:**
+   - Stworzyć factory function `createMockSupabaseClient()` zwracający mock z chainable query builder
+   - Mock `.from().select().eq().single()` dla `getUnscoredMatches` i `upsertScore`
+   - Mock `.from().select().eq()` dla `getBetsForMatch`
+   - Mock `.from().update().eq()` dla `markMatchAsScored`
+
+2. **Spy na wywołania:**
+   - `vi.spyOn()` na metodach query buildera do weryfikacji parametrów
+   - Weryfikacja kolejności wywołań w testach integracyjnych funkcji `scoreMatches`
+
+3. **Testowanie agregacji:**
+   - Weryfikować inkrementację liczników `processed_matches` i `updated_scores` (linie 130, 139)
+   - Weryfikować dodawanie błędów do `errors` array (linia 142)
+
+4. **Testowanie logiki biznesowej:**
+   - Warunek porównania wyników (linia 126): `bet.picked_result === match.result`
+   - Logika trybu dryRun (linie 127, 135): `if (!dryRun)`
+   - Kalkulacja punktów (linia 67): `(existing?.points || 0) + pointsToAdd`
+
+5. **Type safety:**
+   - Testować type casting `as UnscoredMatch[]` (linia 34) i `as BetToScore[]` (linia 47)
+   - Weryfikować zgodność z interfejsami `UnscoredMatch`, `BetToScore`, `ScoreMatchesResponseDTO`
+
+6. **Error handling:**
+   - Weryfikować, że błędy są przechwytywane w catch block (linie 140-143)
+   - Weryfikować format błędów: `error instanceof Error ? error.message : ...`
+   - Weryfikować, że proces kontynuuje po błędzie (for loop nie przerywa się)
+
 ### 3.2 Testy integracyjne (Integration Tests)
 
 **Cel:** Weryfikacja współpracy między komponentami - API z serwisami, serwisy z bazą danych.

@@ -86,7 +86,10 @@ export function MatchCard({ match, onBet, isLoading = false, loadingPrediction =
   };
 
   return (
-    <Card className={cn("transition-shadow hover:shadow-md", isCanceledOrPostponed && "opacity-60")}>
+    <Card
+      className={cn("transition-shadow hover:shadow-md", isCanceledOrPostponed && "opacity-60")}
+      data-testid={`match-card-${match.id}`}
+    >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between text-sm">
           <div className="text-muted-foreground flex items-center gap-2">
@@ -115,16 +118,23 @@ export function MatchCard({ match, onBet, isLoading = false, loadingPrediction =
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1 text-right">
-            <span className="font-medium">{match.home_team}</span>
+            <span className="font-medium" data-testid="home-team">
+              {match.home_team}
+            </span>
           </div>
           <div className="text-muted-foreground text-lg font-bold">vs</div>
           <div className="flex-1 text-left">
-            <span className="font-medium">{match.away_team}</span>
+            <span className="font-medium" data-testid="away-team">
+              {match.away_team}
+            </span>
           </div>
         </div>
 
         {isCanceledOrPostponed ? (
-          <div className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
+          <div
+            className="text-muted-foreground flex items-center justify-center gap-2 text-sm"
+            data-testid="match-canceled-postponed"
+          >
             <AlertTriangleIcon className="size-4" />
             <span>{match.status === "POSTPONED" ? "Mecz przełożony" : "Mecz odwołany"}</span>
           </div>

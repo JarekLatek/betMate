@@ -116,10 +116,10 @@ export function MyBetsView({
 
         {/* Error state */}
         {error && (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12" data-testid="my-bets-error">
             <AlertCircleIcon className="size-8 text-destructive" />
             <p className="text-muted-foreground mt-2">{error}</p>
-            <Button variant="outline" onClick={refresh} className="mt-4">
+            <Button variant="outline" onClick={refresh} className="mt-4" data-testid="my-bets-refresh-button">
               <RefreshCwIcon className="mr-2 size-4" />
               Spróbuj ponownie
             </Button>

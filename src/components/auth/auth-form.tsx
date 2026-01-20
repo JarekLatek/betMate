@@ -152,6 +152,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                     <FormLabel>Nazwa użytkownika</FormLabel>
                     <FormControl>
                       <Input
+                        data-testid="username-input"
                         placeholder="jan_kowalski"
                         autoComplete="username"
                         {...field}
@@ -173,6 +174,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input
+                      data-testid="email-input"
                       type="email"
                       placeholder="twoj@email.pl"
                       autoComplete="email"
@@ -193,6 +195,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                   <FormLabel>Hasło</FormLabel>
                   <FormControl>
                     <Input
+                      data-testid="password-input"
                       type="password"
                       placeholder="••••••••"
                       autoComplete={isRegisterMode ? "new-password" : "current-password"}
@@ -207,13 +210,17 @@ export function AuthForm({ mode }: AuthFormProps) {
 
             {!isRegisterMode && (
               <div className="text-right">
-                <a href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary hover:underline">
+                <a
+                  href="/forgot-password"
+                  data-testid="forgot-password-link"
+                  className="text-sm text-muted-foreground hover:text-primary hover:underline"
+                >
                   Zapomniałem hasła
                 </a>
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" data-testid="submit-button" className="w-full" disabled={isLoading}>
               {isLoading ? "Ładowanie..." : isRegisterMode ? "Zarejestruj się" : "Zaloguj się"}
             </Button>
           </form>
@@ -224,6 +231,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           {isRegisterMode ? "Masz już konto? " : "Nie masz konta? "}
           <a
             href={isRegisterMode ? "/login" : "/register"}
+            data-testid="auth-toggle-link"
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
             {isRegisterMode ? "Zaloguj się" : "Zarejestruj się"}

@@ -107,7 +107,7 @@ export function MatchesView({ initialTournaments = [] }: MatchesViewProps) {
       <main className="container mx-auto flex-1 px-4 py-6">
         {/* Loading state for tournaments */}
         {tournamentsLoading && (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12" data-testid="tournaments-loading">
             <Loader2Icon className="text-muted-foreground size-8 animate-spin" />
             <p className="text-muted-foreground mt-2">Ładowanie turniejów...</p>
           </div>
@@ -115,17 +115,17 @@ export function MatchesView({ initialTournaments = [] }: MatchesViewProps) {
 
         {/* No tournament selected */}
         {!tournamentsLoading && !selectedTournamentId && (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12" data-testid="no-tournament-selected">
             <p className="text-muted-foreground">Wybierz turniej, aby zobaczyć mecze</p>
           </div>
         )}
 
         {/* Error state */}
         {error && (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12" data-testid="matches-error">
             <AlertCircleIcon className="size-8 text-destructive" />
             <p className="text-muted-foreground mt-2">{error}</p>
-            <Button variant="outline" onClick={refresh} className="mt-4">
+            <Button variant="outline" onClick={refresh} className="mt-4" data-testid="refresh-button">
               <RefreshCwIcon className="mr-2 size-4" />
               Spróbuj ponownie
             </Button>
@@ -136,19 +136,22 @@ export function MatchesView({ initialTournaments = [] }: MatchesViewProps) {
         {!error && selectedTournamentId && (
           <>
             {isLoading && matches.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
+              <div className="flex flex-col items-center justify-center py-12" data-testid="matches-loading">
                 <Loader2Icon className="text-muted-foreground size-8 animate-spin" />
                 <p className="text-muted-foreground mt-2">Ładowanie meczów...</p>
               </div>
             ) : matches.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
+              <div className="flex flex-col items-center justify-center py-12" data-testid="matches-empty">
                 <p className="text-muted-foreground">
                   {filter === "UPCOMING" ? "Brak nadchodzących meczów" : "Brak zakończonych meczów"}
                 </p>
               </div>
             ) : (
               <>
-                <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div
+                  className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                  data-testid="matches-list"
+                >
                   {matches.map((match) => (
                     <MatchCard
                       key={match.id}
@@ -163,7 +166,7 @@ export function MatchesView({ initialTournaments = [] }: MatchesViewProps) {
                 {/* Load more */}
                 {hasMore && (
                   <div className="flex justify-center pt-4">
-                    <Button variant="outline" onClick={loadMore} disabled={isLoading}>
+                    <Button variant="outline" onClick={loadMore} disabled={isLoading} data-testid="load-more-button">
                       {isLoading ? (
                         <>
                           <Loader2Icon className="mr-2 size-4 animate-spin" />

@@ -36,6 +36,7 @@ export function DeleteBetButton({ onDelete, isDeleting = false, disabled = false
           disabled={disabled || isDeleting}
           className="text-background"
           aria-label="Usuń zakład"
+          data-testid="delete-bet-button"
         >
           {isDeleting ? (
             <Loader2Icon className="size-4 animate-spin" />
@@ -52,8 +53,10 @@ export function DeleteBetButton({ onDelete, isDeleting = false, disabled = false
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Anuluj</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirm}>Usuń</AlertDialogAction>
+          <AlertDialogCancel data-testid="delete-bet-cancel">Anuluj</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirm} data-testid="delete-bet-confirm">
+            Usuń
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -129,17 +129,17 @@ export function LeaderboardView({
       <main className="container mx-auto flex-1 px-4 py-6">
         {/* No tournaments state */}
         {!tournamentsLoading && tournaments.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12" data-testid="no-tournaments">
             <p className="text-muted-foreground">Brak dostępnych turniejów</p>
           </div>
         )}
 
         {/* Error state */}
         {error && (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12" data-testid="leaderboard-error">
             <AlertCircleIcon className="text-destructive size-8" />
             <p className="text-muted-foreground mt-2">{error}</p>
-            <Button variant="outline" onClick={refresh} className="mt-4">
+            <Button variant="outline" onClick={refresh} className="mt-4" data-testid="leaderboard-refresh-button">
               <RefreshCwIcon className="mr-2 size-4" />
               Spróbuj ponownie
             </Button>
@@ -148,7 +148,7 @@ export function LeaderboardView({
 
         {/* Leaderboard table */}
         {!error && tournaments.length > 0 && (
-          <div ref={tableRef}>
+          <div ref={tableRef} data-testid="leaderboard-table">
             <LeaderboardTable entries={entries} currentUserId={currentUserId} isLoading={isLoading} />
 
             <LoadMoreButton onClick={loadMore} isLoading={isLoadingMore} hasMore={hasMore} />

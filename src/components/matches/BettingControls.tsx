@@ -27,7 +27,7 @@ export function BettingControls({
   if (isLocked) {
     return (
       <div className="flex items-center justify-center gap-2">
-        <div className="text-muted-foreground flex items-center gap-1.5 text-sm">
+        <div className="text-muted-foreground flex items-center gap-1.5 text-sm" data-testid="betting-locked">
           <LockIcon className="size-4" />
           <span>Zakłady zamknięte</span>
         </div>
@@ -51,6 +51,7 @@ export function BettingControls({
             className={cn("min-w-[48px]", isSelected && "ring-2 ring-offset-2")}
             aria-pressed={isSelected}
             aria-label={`Obstaw ${option.label}`}
+            data-testid={`bet-button-${option.value.toLowerCase()}`}
           >
             {isButtonLoading ? <Loader2Icon className="size-4 animate-spin" /> : option.label}
           </Button>

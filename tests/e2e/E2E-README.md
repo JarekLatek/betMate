@@ -19,7 +19,10 @@ tests/e2e/
 │   └── MyBetsPage.ts
 ├── specs/             # Test specifications
 │   ├── auth.spec.ts
-│   └── betting.spec.ts
+│   ├── betting.spec.ts
+│   ├── leaderboard.spec.ts
+│   ├── my-bets.spec.ts
+│   └── edge-cases.spec.ts
 └── E2E-README.md
 ```
 
@@ -52,19 +55,31 @@ SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
 npm run test:e2e
 
 # Run tests in UI mode (interactive)
-npx playwright test --ui
+npm run test:e2e:ui
+
+# Run tests in headed mode (see browser)
+npm run test:e2e:headed
 
 # Run specific test file
 npx playwright test tests/e2e/specs/auth.spec.ts
+npx playwright test tests/e2e/specs/betting.spec.ts
+npx playwright test tests/e2e/specs/leaderboard.spec.ts
+npx playwright test tests/e2e/specs/my-bets.spec.ts
+npx playwright test tests/e2e/specs/edge-cases.spec.ts
 
-# Run tests in headed mode (see browser)
-npx playwright test --headed
+# Run specific test suite
+npx playwright test --grep "Leaderboard"
+npx playwright test --grep "My Bets"
+npx playwright test --grep "Edge Cases"
 
 # Run tests with specific project/browser
 npx playwright test --project=chromium
 
 # Debug tests
 npx playwright test --debug
+
+# Run only edge case tests
+npx playwright test tests/e2e/specs/edge-cases.spec.ts --headed
 ```
 
 ## Data Cleanup (Global Teardown)
@@ -223,25 +238,122 @@ test("should place a bet", async ({ authenticatedPage }) => {
 - ✅ Locked matches handling
 - ✅ Session persistence
 
-## Next Steps
+### Leaderboard Tests (leaderboard.spec.ts)
+- ✅ Navigate to leaderboard page
+- ✅ Display leaderboard table when tournaments exist
+- ✅ Display participant entries with correct structure
+- ✅ Display participants in descending order by points
+- ✅ Highlight current user's row
+- ✅ Filter leaderboard by tournament ID
+- ✅ Error handling and refresh functionality
+- ✅ Empty state when no tournaments exist
+- ✅ Session persistence across page refreshes
 
-You can extend the test suite by creating additional specs for:
+### My Bets Tests (my-bets.spec.ts)
+- ✅ Navigate to my bets page
+- ✅ Display user's betting history
+- ✅ Display bet details in cards
+- ✅ Filter bets by status (pending, resolved, all)
+- ✅ Filter bets by tournament
+- ✅ Combined filtering (tournament + status)
+- ✅ Delete bet functionality with confirmation dialog
+- ✅ Cancel deletion
+- ✅ Confirm deletion and verify removal
+- ✅ Error handling and refresh functionality
+- ✅ Empty state for no bets
+- ✅ Integration with matches (newly placed bets appear)
+- ✅ Session persistence
 
-1. **Leaderboard Tests**: Create `tests/e2e/specs/leaderboard.spec.ts`
-   - View tournament rankings
-   - Navigate between tournaments
-   - Verify user's position
+### Edge Cases & Negative Scenarios (edge-cases.spec.ts)
+- ✅ **Authentication edge cases:**
+  - Empty email/password validation
+  - Invalid email format handling
+  - Very long email/password handling
+  - Empty username validation
+  - Short password validation
+  - Special characters in username
+  - SQL injection attempt prevention
+- ✅ **Protected routes:**
+  - Redirect unauthenticated users from home, my-bets, leaderboard
+  - Handle non-existent page access
+- ✅ **Betting edge cases:**
+  - Multiple clicks on same bet option
+  - Rapid bet changes on same match
+  - Betting on locked matches
+- ✅ **My Bets edge cases:**
+  - Delete non-existent bet
+  - Invalid tournament ID in URL
+  - Invalid status parameter in URL
+- ✅ **Leaderboard edge cases:**
+  - Invalid tournament ID in URL
+  - No participants in leaderboard
+- ✅ **Session management:**
+  - Page refresh without losing session
+  - Back/forward navigation
+- ✅ **Network & performance:**
+  - Slow network handling
 
-2. **My Bets Tests**: Create `tests/e2e/specs/my-bets.spec.ts`
-   - View bet history
-   - Filter bets by tournament
-   - Filter bets by status
-   - Delete bets
+## Test Suite Summary
 
-3. **Integration Tests**: Create cross-feature tests
-   - Place bet → View in My Bets
-   - Match finishes → Check points in Leaderboard
-   - Filter matches → Place bet → Verify in history
+The E2E test suite is comprehensive and covers:
+
+✅ **Complete feature coverage:**
+- Authentication (login, register, logout)
+- Betting (place, modify, view locked matches)
+- Leaderboard (view rankings, filter by tournament)
+- My Bets (view history, filter, delete bets)
+
+✅ **Edge cases and negative scenarios:**
+- Input validation and boundary conditions
+- Protected route access
+- Error handling and recovery
+- Session management
+- Network resilience
+
+✅ **Test organization:**
+- 5 test specification files
+  - `auth.spec.ts` - 15 tests
+  - `betting.spec.ts` - 8 tests
+  - `leaderboard.spec.ts` - 13 tests
+  - `my-bets.spec.ts` - 22 tests
+  - `edge-cases.spec.ts` - 17 tests
+- Page Object Model pattern for maintainability
+- Authenticated fixtures for efficient test setup
+- Global teardown for data cleanup
+
+**Total test count:** 75 test cases covering all major user flows
+
+## Next Steps (Optional Enhancements)
+
+You can further extend the test suite with:
+
+1. **Visual Regression Tests**: Add screenshot comparisons for UI consistency
+   ```typescript
+   await expect(page).toHaveScreenshot('leaderboard-page.png');
+   ```
+
+2. **Performance Tests**: Measure page load times and API response times
+   ```typescript
+   const startTime = Date.now();
+   await page.goto('/');
+   const loadTime = Date.now() - startTime;
+   expect(loadTime).toBeLessThan(3000);
+   ```
+
+3. **Accessibility Tests**: Integrate axe-core for a11y testing
+   ```bash
+   npm install @axe-core/playwright
+   ```
+
+4. **API Tests**: Add direct API testing alongside E2E tests
+   - Test API endpoints independently
+   - Verify response schemas
+   - Test error responses
+
+5. **Cross-browser Testing**: Enable more browsers in playwright.config.ts
+   - Firefox
+   - WebKit (Safari)
+   - Mobile viewports
 
 ## Best Practices
 

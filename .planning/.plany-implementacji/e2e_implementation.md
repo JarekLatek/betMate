@@ -198,60 +198,54 @@ test.describe('Authentication', () => {
 });
 ```
 
-## Krok 7: Konfiguracja Global Teardown
+## Krok 7: Konfiguracja Global Teardown ✅
 
-### 7.1 Utworzenie skryptu czyszczącego
+### 7.1 Utworzenie skryptu czyszczącego ✅
 
-Utwórz `tests/global-teardown.ts`:
-```typescript
-import { createClient } from '@supabase/supabase-js';
+Utworzono `tests/e2e/global-teardown.ts` z następującymi funkcjami:
 
-async function globalTeardown() {
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLIC_KEY!
-  );
+**Implementowane funkcjonalności:**
+- Automatyczne czyszczenie danych testowych po zakończeniu wszystkich testów
+- Dwie strategie czyszczenia:
+  1. **Service Role Key** (zalecane): Bypasses RLS, czyści wszystkie dane
+  2. **Anon Key + Auth** (fallback): Ograniczone przez RLS policies
 
-  // Zaloguj się jako użytkownik testowy (dla RLS)
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: process.env.E2E_USERNAME!,
-    password: process.env.E2E_PASSWORD!,
-  });
+**Czyszczone tabele:**
+- `bets` - Zakłady stworzone podczas testów
+- `scores` - Punkty użytkownika testowego
 
-  if (signInError) {
-    console.error('Error signing in:', signInError);
-    throw signInError;
-  }
+**Zachowane dane (seed data):**
+- `matches` - Mecze potrzebne do testów
+- `tournaments` - Turnieje potrzebne do testów
+- `profiles` - Profil użytkownika testowego
 
-  // Wyczyść dane testowe z tabel
-  const tablesToClean = ['bets', 'matches', 'tournaments'];
+### 7.2 Rejestracja w konfiguracji ✅
 
-  for (const table of tablesToClean) {
-    const { error } = await supabase
-      .from(table)
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Usuń wszystkie oprócz dummy
-
-    if (error) {
-      console.error(`Error cleaning ${table}:`, error);
-    } else {
-      console.log(`Cleaned ${table} table`);
-    }
-  }
-}
-
-export default globalTeardown;
-```
-
-### 7.2 Rejestracja w konfiguracji
-
-Dodaj do `playwright.config.ts`:
+Zaktualizowano `playwright.config.ts`:
 ```typescript
 export default defineConfig({
   // ... reszta konfiguracji
-  globalTeardown: './tests/global-teardown.ts',
+  globalTeardown: './tests/e2e/global-teardown.ts',
 });
 ```
+
+### 7.3 Opcjonalna konfiguracja Service Role Key
+
+Dodaj do `.env.test` (opcjonalne, ale zalecane):
+```env
+# Optional: Service Role Key for complete data cleanup (bypasses RLS)
+SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+```
+
+Klucz można pobrać z: Supabase Dashboard → Settings → API → service_role key
+
+**Bez Service Role Key:**
+- Czyszczenie ograniczone przez RLS policies
+- Niektóre dane testowe mogą nie zostać usunięte
+
+**Z Service Role Key:**
+- Pełne czyszczenie wszystkich danych testowych
+- Bypasses RLS dla maksymalnej elastyczności
 
 ## Krok 8: Uruchomienie testów
 

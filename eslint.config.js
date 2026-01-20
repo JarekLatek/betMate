@@ -56,6 +56,24 @@ const reactConfig = tseslint.config({
   },
 });
 
+const testFilesConfig = tseslint.config({
+  files: ["**/*.spec.{ts,tsx}", "**/*.test.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+  rules: {
+    "react-hooks/rules-of-hooks": "off",
+    "react-hooks/exhaustive-deps": "off",
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "no-console": "off",
+  },
+});
+
+const edgeFunctionsConfig = tseslint.config({
+  files: ["supabase/functions/**/*.ts"],
+  rules: {
+    "no-console": "off",
+  },
+});
+
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
   {
@@ -67,6 +85,8 @@ export default tseslint.config(
   baseConfig,
   jsxA11yConfig,
   reactConfig,
+  testFilesConfig,
+  edgeFunctionsConfig,
   eslintPluginAstro.configs["flat/recommended"],
   eslintPluginPrettier
 );

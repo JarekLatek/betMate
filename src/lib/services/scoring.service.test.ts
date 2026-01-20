@@ -16,6 +16,7 @@ const createMockSupabaseClient = () => {
   });
 
   return {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     from: vi.fn((_table: string) => createQuery()),
   };
 };

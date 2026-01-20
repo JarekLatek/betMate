@@ -72,15 +72,9 @@ export class MatchCard {
   /**
    * Check if a specific bet button is selected/active
    */
-  async isBetSelected(
-    betType: "home_win" | "draw" | "away_win"
-  ): Promise<boolean> {
+  async isBetSelected(betType: "home_win" | "draw" | "away_win"): Promise<boolean> {
     const button =
-      betType === "home_win"
-        ? this.betButtonHomeWin
-        : betType === "draw"
-          ? this.betButtonDraw
-          : this.betButtonAwayWin;
+      betType === "home_win" ? this.betButtonHomeWin : betType === "draw" ? this.betButtonDraw : this.betButtonAwayWin;
 
     // Check if button has the "default" variant (which indicates it's selected)
     const ariaPressed = await button.getAttribute("aria-pressed");

@@ -125,9 +125,7 @@ base.describe("Betting", () => {
   });
 
   base.describe("Modify Bet", () => {
-    base("should change bet from home win to away win", async ({
-      authenticatedPage,
-    }) => {
+    base("should change bet from home win to away win", async ({ authenticatedPage }) => {
       const matchesPage = new MatchesPage(authenticatedPage);
 
       await matchesPage.goto();
@@ -164,9 +162,7 @@ base.describe("Betting", () => {
   });
 
   base.describe("Locked Matches", () => {
-    base("should not allow betting on locked matches", async ({
-      authenticatedPage,
-    }) => {
+    base("should not allow betting on locked matches", async ({ authenticatedPage }) => {
       const matchesPage = new MatchesPage(authenticatedPage);
 
       await matchesPage.goto();
@@ -199,9 +195,7 @@ base.describe("Betting", () => {
   });
 
   base.describe("User Session", () => {
-    base("should maintain authentication across pages", async ({
-      authenticatedPage,
-    }) => {
+    base("should maintain authentication across pages", async ({ authenticatedPage }) => {
       const homePage = new HomePage(authenticatedPage);
       const matchesPage = new MatchesPage(authenticatedPage);
 

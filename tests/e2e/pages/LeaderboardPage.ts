@@ -1,4 +1,4 @@
-import type { Page, Locator } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 /**
  * Page Object Model for the Leaderboard/Ranking page
@@ -23,9 +23,7 @@ export class LeaderboardPage {
    * Navigate to the leaderboard page
    */
   async goto(tournamentId?: number) {
-    const url = tournamentId
-      ? `/ranking?tournamentId=${tournamentId}`
-      : "/ranking";
+    const url = tournamentId ? `/ranking?tournamentId=${tournamentId}` : "/ranking";
     await this.page.goto(url);
   }
 

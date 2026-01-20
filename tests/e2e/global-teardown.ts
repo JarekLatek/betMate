@@ -26,9 +26,7 @@ async function globalTeardown() {
   }
 
   console.log(
-    useServiceRole
-      ? "🔑 Using service role key (bypasses RLS)"
-      : "🔑 Using anon key (limited by RLS policies)",
+    useServiceRole ? "🔑 Using service role key (bypasses RLS)" : "🔑 Using anon key (limited by RLS policies)"
   );
 
   const supabase = createClient(supabaseUrl, supabaseKey);

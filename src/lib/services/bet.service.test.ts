@@ -123,9 +123,7 @@ describe("BetService", () => {
         single: vi.fn().mockResolvedValue({ data: updatedBet, error: null }),
       };
 
-      (mockSupabase.from as Mock)
-        .mockReturnValueOnce(selectMockChain)
-        .mockReturnValueOnce(updateMockChain);
+      (mockSupabase.from as Mock).mockReturnValueOnce(selectMockChain).mockReturnValueOnce(updateMockChain);
 
       // Act
       const result = await betService.updateBet(betId, userId, command);
@@ -334,9 +332,7 @@ describe("BetService", () => {
         single: vi.fn().mockResolvedValue({ data: null, error: updateError }),
       };
 
-      (mockSupabase.from as Mock)
-        .mockReturnValueOnce(selectMockChain)
-        .mockReturnValueOnce(updateMockChain);
+      (mockSupabase.from as Mock).mockReturnValueOnce(selectMockChain).mockReturnValueOnce(updateMockChain);
 
       // Act
       const result = await betService.updateBet(betId, userId, command);
@@ -406,9 +402,7 @@ describe("BetService", () => {
         eq: vi.fn().mockResolvedValue({ error: null }),
       });
 
-      (mockSupabase.from as Mock)
-        .mockReturnValueOnce(selectMockChain)
-        .mockReturnValueOnce(deleteMockChain);
+      (mockSupabase.from as Mock).mockReturnValueOnce(selectMockChain).mockReturnValueOnce(deleteMockChain);
 
       // Act
       const result = await betService.deleteBet(betId, userId);
@@ -559,9 +553,7 @@ describe("BetService", () => {
         }),
       };
 
-      (mockSupabase.from as Mock)
-        .mockReturnValueOnce(selectMockChain)
-        .mockReturnValueOnce(deleteMockChain);
+      (mockSupabase.from as Mock).mockReturnValueOnce(selectMockChain).mockReturnValueOnce(deleteMockChain);
 
       // Act
       const result = await betService.deleteBet(betId, userId);

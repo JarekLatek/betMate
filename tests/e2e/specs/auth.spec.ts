@@ -9,9 +9,7 @@ import { HomePage } from "../pages/HomePage";
  */
 test.describe("Authentication", () => {
   test.describe("Login", () => {
-    test("should successfully login with valid credentials", async ({
-      page,
-    }) => {
+    test("should successfully login with valid credentials", async ({ page }) => {
       const loginPage = new LoginPage(page);
       const homePage = new HomePage(page);
 
@@ -19,10 +17,7 @@ test.describe("Authentication", () => {
       await loginPage.goto();
 
       // Login with test credentials
-      await loginPage.login(
-        process.env.E2E_USERNAME!,
-        process.env.E2E_PASSWORD!
-      );
+      await loginPage.login(process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
 
       // Verify redirect to home page
       await expect(page).toHaveURL("/");
@@ -31,9 +26,7 @@ test.describe("Authentication", () => {
       await expect(homePage.logoutButton).toBeVisible();
     });
 
-    test("should show error message with invalid credentials", async ({
-      page,
-    }) => {
+    test("should show error message with invalid credentials", async ({ page }) => {
       const loginPage = new LoginPage(page);
 
       // Navigate to login page
@@ -85,10 +78,7 @@ test.describe("Authentication", () => {
       await loginPage.goto();
 
       // Fill credentials
-      await loginPage.fillCredentials(
-        process.env.E2E_USERNAME!,
-        process.env.E2E_PASSWORD!
-      );
+      await loginPage.fillCredentials(process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
 
       // Click submit and immediately check if it's disabled
       const submitPromise = loginPage.submit();
@@ -108,10 +98,7 @@ test.describe("Authentication", () => {
 
       // Login first
       await loginPage.goto();
-      await loginPage.login(
-        process.env.E2E_USERNAME!,
-        process.env.E2E_PASSWORD!
-      );
+      await loginPage.login(process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
       await expect(page).toHaveURL("/");
 
       // Logout
@@ -151,11 +138,7 @@ test.describe("Authentication", () => {
 
       // Try to register with existing username
       // Using the E2E test user's email as username should already exist
-      await registerPage.register(
-        "existing_user",
-        "test@example.com",
-        "password123"
-      );
+      await registerPage.register("existing_user", "test@example.com", "password123");
 
       // Wait for error message
       // Note: The exact error message depends on your implementation
@@ -183,9 +166,7 @@ test.describe("Authentication", () => {
   });
 
   test.describe("Protected Routes", () => {
-    test("should redirect to login when accessing protected route without authentication", async ({
-      page,
-    }) => {
+    test("should redirect to login when accessing protected route without authentication", async ({ page }) => {
       // Try to access home page without logging in
       await page.goto("/");
 

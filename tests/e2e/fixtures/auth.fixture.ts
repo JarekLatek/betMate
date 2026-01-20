@@ -1,4 +1,4 @@
-import { test as base, expect } from "@playwright/test";
+import { expect, test as base } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
 /**
@@ -12,9 +12,7 @@ export const test = base.extend<{ authenticatedPage: Page }>({
     const password = process.env.E2E_PASSWORD;
 
     if (!email || !password) {
-      throw new Error(
-        "E2E_USERNAME and E2E_PASSWORD must be set in .env.test"
-      );
+      throw new Error("E2E_USERNAME and E2E_PASSWORD must be set in .env.test");
     }
 
     // Navigate to login page

@@ -1,4 +1,4 @@
-import type { Page, Locator } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 /**
  * Page Object Model for the Register page
@@ -31,11 +31,7 @@ export class RegisterPage {
   /**
    * Fill in the registration form with provided data
    */
-  async fillRegistrationForm(
-    username: string,
-    email: string,
-    password: string
-  ) {
+  async fillRegistrationForm(username: string, email: string, password: string) {
     await this.usernameInput.fill(username);
     await this.emailInput.fill(email);
     await this.passwordInput.fill(password);

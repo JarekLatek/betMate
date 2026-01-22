@@ -7,7 +7,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ hasFilters }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-12">
+    <div className="flex flex-col items-center justify-center py-12" data-testid="empty-state">
       <TicketIcon className="text-muted-foreground size-12" />
       <h3 className="mt-4 text-lg font-semibold">Brak zakładów</h3>
       <p className="text-muted-foreground mt-2 text-center text-sm">

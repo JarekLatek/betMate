@@ -34,6 +34,7 @@ export function BetCard({ bet, onDelete, isDeleting = false }: BetCardProps) {
         bet.displayStatus !== "pending" && "border-l-4",
         borderStyles[bet.displayStatus as keyof typeof borderStyles]
       )}
+      data-testid={`bet-item-${bet.id}`}
     >
       {/* Delete button na kolorowym pasku po lewej */}
       {bet.canDelete && (

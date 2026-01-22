@@ -23,7 +23,7 @@ export class LeaderboardPage {
    * Navigate to the leaderboard page
    */
   async goto(tournamentId?: number) {
-    const url = tournamentId ? `/ranking?tournamentId=${tournamentId}` : "/ranking";
+    const url = tournamentId ? `/leaderboard?tournamentId=${tournamentId}` : "/leaderboard";
     await this.page.goto(url);
   }
 

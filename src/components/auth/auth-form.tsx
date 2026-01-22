@@ -39,7 +39,6 @@ export function AuthForm({ mode }: AuthFormProps) {
   });
 
   const onSubmit = async (data: LoginFormValues | RegisterFormValues) => {
-    // Prevent default form submission
     setIsLoading(true);
     setServerError(null);
 
@@ -156,7 +155,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                         placeholder="jan_kowalski"
                         autoComplete="username"
                         {...field}
-                        disabled={isLoading}
+                        disabled={isLoading || form.formState.isSubmitting}
                         value={field.value ?? ""}
                       />
                     </FormControl>
@@ -179,7 +178,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                       placeholder="twoj@email.pl"
                       autoComplete="email"
                       {...field}
-                      disabled={isLoading}
+                      disabled={isLoading || form.formState.isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -200,7 +199,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                       placeholder="••••••••"
                       autoComplete={isRegisterMode ? "new-password" : "current-password"}
                       {...field}
-                      disabled={isLoading}
+                      disabled={isLoading || form.formState.isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -220,7 +219,12 @@ export function AuthForm({ mode }: AuthFormProps) {
               </div>
             )}
 
-            <Button type="submit" data-testid="submit-button" className="w-full" disabled={isLoading}>
+            <Button
+              type="submit"
+              data-testid="submit-button"
+              className="w-full"
+              disabled={isLoading || form.formState.isSubmitting}
+            >
               {isLoading ? "Ładowanie..." : isRegisterMode ? "Zarejestruj się" : "Zaloguj się"}
             </Button>
           </form>

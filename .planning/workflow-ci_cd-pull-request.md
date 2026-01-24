@@ -17,5 +17,10 @@ Dodatkowe uwagi:
   - SUPABASE_KEY
   - PUBLIC_SUPABASE_URL
   - PUBLIC_SUPABASE_ANON_KEY
+  - SUPABASE_SERVICE_ROLE_KEY
+  - SUPABASE_ACCESS_TOKEN
   - OPENROUTER_API_KEY
+  - E2E_USERNAME_ID
+  - E2E_USERNAME
+  - E2E_PASSWORD
 - zbieraj coverage tylko dla unit testów (npm run test:coverage)

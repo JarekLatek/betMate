@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A web application to simplify and enhance organizing informal sports betting among friends. betMate replaces manual, error-prone methods like spreadsheets with an automated and engaging system.
+Test CI/CD 2
 
 ## Table of Contents
 

@@ -1,12 +1,9 @@
 name: 'Setup Node.js and Dependencies'
-description: 'Checkout code, setup Node.js with version from .nvmrc, and install dependencies'
+description: 'Setup Node.js with version from .nvmrc and install dependencies'
 
 runs:
   using: 'composite'
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v6
-
     - name: Read .nvmrc
       id: node-version
       shell: bash

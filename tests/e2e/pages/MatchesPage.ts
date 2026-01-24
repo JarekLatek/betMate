@@ -1,5 +1,4 @@
 import type { Page, Locator } from "@playwright/test";
-import { MatchCard } from "./MatchCard";
 
 /**
  * Page Object Model for the Matches page
@@ -17,13 +16,6 @@ export class MatchesPage {
    */
   async goto() {
     await this.page.goto("/");
-  }
-
-  /**
-   * Get a specific match card by match ID
-   */
-  getMatchCard(matchId: number): MatchCard {
-    return new MatchCard(this.page, matchId);
   }
 
   /**

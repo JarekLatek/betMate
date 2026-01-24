@@ -211,3 +211,44 @@ Smart optimizations:
 - Implement test hooks for setup and teardown
 - Use expect assertions with specific matchers
 - Leverage parallel execution for faster test runs
+
+## CI/CD
+
+### GitHub Actions Guidelines
+
+When creating or modifying GitHub Actions workflows, follow these best practices:
+
+**Pre-flight checks:**
+- Check if `package.json` exists in project root and summarize key scripts
+- Check if `.nvmrc` exists in project root
+- Check if `.env.example` exists in project root to identify key `env:` variables
+- Always use `git branch -a | cat` to verify whether we use `main` or `master` branch
+
+**Workflow configuration:**
+- Always use `env:` variables and secrets attached to jobs instead of global workflows
+- Always use `npm ci` for Node-based dependency setup (not `npm install`)
+- Extract common steps into composite actions in separate files
+
+**Action version verification (final step):**
+
+Once workflow is complete, verify all public actions are up-to-date and not deprecated:
+
+1. For each public action, check the most up-to-date version (use only major version):
+```bash
+curl -s https://api.github.com/repos/{owner}/{repo}/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([0-9]+).*/\1/'
+```
+
+2. (Ask if needed) Fetch README.md to verify we're not using deprecated actions:
+```bash
+curl -s https://raw.githubusercontent.com/{owner}/{repo}/refs/tags/v{TAG_VERSION}/README.md
+```
+
+3. (Ask if needed) Fetch repo metadata to check if action is archived:
+```bash
+curl -s https://api.github.com/repos/{owner}/{repo} | grep '"archived":'
+```
+
+4. (Ask if needed) In case of linter issues related to action parameters, fetch action description:
+```bash
+curl -s https://raw.githubusercontent.com/{owner}/{repo}/refs/heads/{main/master}/action.yml
+```

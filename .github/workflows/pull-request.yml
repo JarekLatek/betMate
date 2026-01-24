@@ -1,4 +1,4 @@
-name: Pull Request CI
+name: Test & build main
 
 on:
   pull_request:

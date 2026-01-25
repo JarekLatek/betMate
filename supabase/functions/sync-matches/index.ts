@@ -127,6 +127,37 @@ interface BetToScore {
 const POINTS_FOR_CORRECT_BET = 3;
 
 /**
+ * Determine the active season by checking API data availability
+ * Tries current year first, falls back to previous year if no data found
+ */
+async function determineActiveSeason(
+  footballApiUrl: string,
+  footballApiKey: string,
+  tournamentId: number
+): Promise<number> {
+  const currentYear = new Date().getFullYear();
+
+  // Try current year
+  const currentYearUrl = `${footballApiUrl}/fixtures?league=${tournamentId}&season=${currentYear}&last=1`;
+  const currentResponse = await fetch(currentYearUrl, {
+    headers: { "x-apisports-key": footballApiKey },
+  });
+
+  if (currentResponse.ok) {
+    const data: ApiResponse = await currentResponse.json();
+    if (data.response && data.response.length > 0) {
+      console.log(`[SEASON] Using current season: ${currentYear}`);
+      return currentYear;
+    }
+  }
+
+  // Fallback to previous year
+  const previousYear = currentYear - 1;
+  console.log(`[SEASON] No data for ${currentYear}, falling back to ${previousYear}`);
+  return previousYear;
+}
+
+/**
  * Score all unscored finished matches
  * Awards points to users who correctly predicted match results
  */
@@ -237,7 +268,8 @@ async function syncFullMode(
     matches: { inserted: 0, updated: 0, skipped: 0, errors: 0 },
   };
 
-  const season = new Date().getFullYear();
+  // Determine active season (current year or fallback to previous)
+  const season = await determineActiveSeason(footballApiUrl, footballApiKey, TOURNAMENT_IDS[0].apiId);
 
   for (const tournament of TOURNAMENT_IDS) {
     console.log(`[FULL] Processing tournament: ${tournament.name}`);

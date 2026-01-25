@@ -5,6 +5,8 @@
 
 A web application to simplify and enhance organizing informal sports betting among friends. betMate replaces manual, error-prone methods like spreadsheets with an automated and engaging system.
 
+CI/CD tests change.
+
 ## Table of Contents
 
 - [Project Description](#project-description)

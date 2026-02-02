@@ -1,0 +1,26 @@
+name: Keep Supabase Database Alive
+
+on:
+  schedule:
+    # Co 5 dni o 3:00 UTC (przed 7-dniowym limitem nieaktywności Supabase)
+    - cron: '0 3 */5 * *'
+  workflow_dispatch: # Umożliwia manualne uruchomienie z GitHub UI
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Database via REST API
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}" \
+            "${{ secrets.PUBLIC_SUPABASE_URL }}/rest/v1/matches?select=id&limit=1")
+
+          if [ $response -eq 200 ]; then
+            echo "✅ Database is active - successfully queried matches table"
+            echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          else
+            echo "❌ Failed to ping database (HTTP $response)"
+            exit 1
+          fi

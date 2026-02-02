@@ -10,13 +10,16 @@ jobs:
   ping-database:
     runs-on: ubuntu-latest
     environment: integration
+    env:
+      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+      PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
     steps:
       - name: Ping Supabase Database via REST API
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "apikey: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}" \
-            "${{ secrets.PUBLIC_SUPABASE_URL }}/rest/v1/matches?select=id&limit=1")
+            -H "apikey: $PUBLIC_SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $PUBLIC_SUPABASE_ANON_KEY" \
+            "$PUBLIC_SUPABASE_URL/rest/v1/matches?select=id&limit=1")
 
           if [ $response -eq 200 ]; then
             echo "✅ Database is active - successfully queried matches table"

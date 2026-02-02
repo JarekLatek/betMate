@@ -9,6 +9,7 @@ on:
 jobs:
   ping-database:
     runs-on: ubuntu-latest
+    environment: integration
     steps:
       - name: Ping Supabase Database via REST API
         run: |

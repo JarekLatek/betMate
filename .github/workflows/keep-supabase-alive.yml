@@ -2,9 +2,12 @@ name: Keep Supabase Database Alive
 
 on:
   schedule:
-    # Co 5 dni o 3:00 UTC (przed 7-dniowym limitem nieaktywności Supabase)
-    - cron: '0 3 */5 * *'
+    # Codziennie o 3:00 UTC (duży margines względem 7-dniowego limitu Supabase)
+    - cron: '0 3 * * *'
   workflow_dispatch: # Umożliwia manualne uruchomienie z GitHub UI
+
+permissions:
+  contents: write # potrzebne do okresowego commitu heartbeat
 
 jobs:
   ping-database:
@@ -12,7 +15,11 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      # Co ile dni najwyżej robimy commit heartbeat (reset 60-dniowego licznika GitHuba)
+      HEARTBEAT_MAX_AGE_DAYS: 30
     steps:
+      - uses: actions/checkout@v4
+
       - name: Ping Supabase Database via REST API
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -20,10 +27,39 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_KEY" \
             "$SUPABASE_URL/rest/v1/matches?select=id&limit=1")
 
-          if [ $response -eq 200 ]; then
-            echo "✅ Database is active - successfully queried matches table"
-            echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          else
+          if [ "$response" -ne 200 ]; then
             echo "❌ Failed to ping database (HTTP $response)"
             exit 1
           fi
+          echo "✅ Database is active - successfully queried matches table"
+          echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - name: Heartbeat commit (rzadko, by GitHub nie wyłączył harmonogramu)
+        run: |
+          heartbeat_file=".github/last-keepalive.txt"
+          now_epoch=$(date -u +%s)
+
+          # Czy minęło wystarczająco dużo dni od ostatniego heartbeatu?
+          needs_commit=true
+          if [ -f "$heartbeat_file" ]; then
+            last=$(cat "$heartbeat_file" 2>/dev/null || echo "")
+            last_epoch=$(date -u -d "$last" +%s 2>/dev/null || echo 0)
+            age_days=$(( (now_epoch - last_epoch) / 86400 ))
+            echo "Ostatni heartbeat: ${last:-brak} (sprzed ${age_days} dni)"
+            if [ "$last_epoch" -ne 0 ] && [ "$age_days" -lt "$HEARTBEAT_MAX_AGE_DAYS" ]; then
+              needs_commit=false
+            fi
+          fi
+
+          if [ "$needs_commit" = false ]; then
+            echo "⏭️  Heartbeat aktualny – pomijam commit."
+            exit 0
+          fi
+
+          echo "📝 Zapisuję nowy heartbeat i commituję."
+          date -u +%Y-%m-%dT%H:%M:%SZ > "$heartbeat_file"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$heartbeat_file"
+          git commit -m "chore: keep-alive heartbeat [skip ci]" || exit 0
+          git push

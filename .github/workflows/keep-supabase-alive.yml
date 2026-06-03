@@ -18,7 +18,7 @@ jobs:
       # Co ile dni najwyżej robimy commit heartbeat (reset 60-dniowego licznika GitHuba)
       HEARTBEAT_MAX_AGE_DAYS: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Ping Supabase Database via REST API
         run: |

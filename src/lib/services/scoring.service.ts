@@ -1,8 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/db/database.types";
 import type { MatchOutcome, ScoreMatchesResponseDTO } from "@/types";
-
-const POINTS_FOR_CORRECT_BET = 3;
+import { POINTS_FOR_CORRECT_BET } from "@/lib/scoring/score-rule";
 
 interface UnscoredMatch {
   id: number;

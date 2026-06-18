@@ -14,6 +14,9 @@
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+// Single source of truth for the points rule (oracle). Shared with the Node
+// service via a relative import so the constant cannot diverge across runtimes.
+import { POINTS_FOR_CORRECT_BET } from "../../../src/lib/scoring/score-rule.ts";
 
 // Tournament IDs from api-football.com
 const TOURNAMENT_IDS = [
@@ -123,8 +126,6 @@ interface BetToScore {
   user_id: string;
   picked_result: MatchOutcome;
 }
-
-const POINTS_FOR_CORRECT_BET = 3;
 
 /**
  * Determine the active season by checking API data availability

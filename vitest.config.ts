@@ -6,7 +6,9 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
-    exclude: ["node_modules", "dist", "e2e/**"],
+    // `**/._*` excludes macOS AppleDouble sidecar files that some volumes
+    // (e.g. SMB/Synology) create next to source files and which break esbuild.
+    exclude: ["node_modules", "dist", "e2e/**", "**/._*"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],

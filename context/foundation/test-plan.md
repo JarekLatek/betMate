@@ -44,7 +44,7 @@ research's job, see §1 principle #3).
 
 | # | Risk (failure scenario) | Impact | Likelihood | Source (evidence — not anchor) |
 |---|--------------------------|--------|------------|--------------------------------|
-| 1 | Scoring awards wrong points or silently corrupts the leaderboard mid-tournament (wrong W/D/W credit, double-scoring on re-run, accumulation error) | High | High | PRD US-008 / FR-006; interview Q1 + Q3; **oracle conflict: PRD states 1 pt per correct bet, implementation uses 3 pts** |
+| 1 | Scoring awards wrong points or silently corrupts the leaderboard mid-tournament (wrong W/D/W credit, double-scoring on re-run, accumulation error) | High | High | PRD US-008 / FR-006; interview Q1 + Q3; **oracle resolved 2026-06-18: agreed rule = 3 pts per correct outcome, 0 otherwise (no `prd.md` on disk — decision recorded in change `testing-scoring-bet-lock-core`); future "Toto" exact-score model deferred** |
 | 2 | `sync-matches` drifts or fails silently on an api-football response-shape change → fixtures/results/status go stale or wrong with no signal | High | High | interview Q2 (lived burn: external API shape) + Q1; PRD FR-002 / FR-006 |
 | 3 | 5-minute bet lock bypassed via timezone/clock handling → a bet is placed or edited after kickoff, breaking fairness | High | Medium | PRD FR-004 / FR-005, US-004 / US-005; interview Q1 |
 | 4 | IDOR — a user edits or deletes another user's bet because authorization checks login but not ownership | High | Medium | interview Q1; abuse lens; PRD auth/RLS rules (US-002, FR-001) |
@@ -138,10 +138,14 @@ relevant rollout phase ships; before that, it reads "TBD — see §3 Phase N."
   `bet.service.test.ts`).
 - **Reference test**: `src/lib/services/scoring.service.test.ts`,
   `src/lib/services/bet.service.test.ts`.
-- **Oracle rule**: take expected values from the agreed spec (PRD / this
-  plan), never from the implementation under test — see §3 Phase 1 for the
-  scoring 1pt-vs-3pt oracle conflict.
-- **Run locally**: TBD — confirm in §3 Phase 1.
+- **Oracle rule**: take expected values from the agreed spec, never from the
+  implementation under test. The scoring oracle is **resolved (2026-06-18):
+  3 pts per correct outcome, 0 otherwise**, single-sourced in
+  `src/lib/scoring/score-rule.ts` (`POINTS_FOR_CORRECT_BET` / `pointsForBet`)
+  and asserted as the literal `3`, not echoed from the constant — see
+  `score-rule.test.ts`. The richer "Toto" exact-score model is deferred (§7).
+- **Run locally**: `npm test` (= `vitest run`); `npm run test:watch` for a
+  single file; `npm run test:coverage` for coverage.
 
 ### 6.2 Adding an integration test
 
@@ -182,6 +186,11 @@ contributors should respect these unless the underlying assumption changes.
 - **Generated `src/db/database.types.ts`** — the generator is the oracle.
 - **Supabase and api-football internals** — mock at the boundary only; do not
   test third-party behavior.
+- **Future "Toto" exact-score scoring model** (exact scoreline = 3, correct
+  outcome only = 1, wrong = 0) — deferred, not built: it needs predicted-goals
+  columns in `bets`, a scoreline-entry UI, and a scoring rewrite. The current
+  oracle is the flat 3-pts-per-correct-outcome rule (decision 2026-06-18,
+  change `testing-scoring-bet-lock-core`); revisit only when that model lands.
 
 ## 8. Freshness Ledger
 

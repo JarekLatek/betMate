@@ -450,15 +450,15 @@ scoring rewrite) is explicitly out of scope and would be its own change.
 
 #### Automated
 
-- [x] 1.1 New module + test exist (score-rule.ts, score-rule.test.ts)
-- [x] 1.2 Unit tests pass (npm test)
-- [x] 1.3 Lint passes (npm run lint)
-- [x] 1.4 Typecheck/build passes (npm run build)
+- [x] 1.1 New module + test exist (score-rule.ts, score-rule.test.ts) — 2956e01
+- [x] 1.2 Unit tests pass (npm test) — 2956e01
+- [x] 1.3 Lint passes (npm run lint) — 2956e01
+- [x] 1.4 Typecheck/build passes (npm run build) — 2956e01
 
 #### Manual
 
-- [x] 1.5 Edge function still bundles/deploys (or fallback documented) — `deno check` passes, cross-dir import resolves
-- [x] 1.6 test-plan.md §2/§6.1 + change.md reflect resolved oracle + deferred model
+- [x] 1.5 Edge function still bundles/deploys — `deno check` passes, cross-dir import resolves — 2956e01
+- [x] 1.6 test-plan.md §2/§6.1 + change.md reflect resolved oracle + deferred model — 2956e01
 - [ ] 1.7 Spot scoring run awards 3 per correct bet — DEFERRED: empty test DB, no signal without seed
 
 ### Phase 2: Scoring service correctness

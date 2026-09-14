@@ -1,7 +1,7 @@
 ---
 change_id: refactor-opportunities
 title: Rank refactor opportunities from the scoring flow analysis
-status: preparing
+status: plan_reviewed
 created: 2026-09-14
 updated: 2026-09-14
 archived_at: null

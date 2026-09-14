@@ -346,3 +346,21 @@ query was repeated with `rg`, as required by M4L3.
    despite the one-point statement in `.ai/prd.md`?
 
 No refactor design or implementation is included. M4L3 stops here for user confirmation.
+
+## Decision gate outcome
+
+Decided by Jarosław Latek on 2026-09-14 at commit `05422af`.
+
+| # | Decision | Consequence for the next stage |
+| - | -------- | ------------------------------ |
+| 1 | **Confirmed.** The finished match → score persistence → displayed leaderboard boundary is the M4L3 target, and the report describes current business behavior correctly. | `research.md` is the accepted input for M4L4 refactor opportunities. |
+| 2 | **Diagnostic.** `POST /api/admin/score-matches` is not a supported production scoring path. | The Edge Function is the only production scoring orchestration. TD4 is an access/cleanup concern for a diagnostic path, not a second runtime to keep behaviorally equivalent. |
+| 3 | **Visible.** Users with bets but zero correct predictions should appear in the leaderboard with zero points. | TD6 moves from unknown intent to a confirmed gap between current behavior and product intent. |
+| 4 | **Three points.** A correct 1X2 prediction awards three points. | `score-rule.ts` remains the oracle. The one-point statements in `.ai/prd.md` (lines 18, 103, 112) are documentation drift, not a code defect. |
+
+Pre-gate verification: `rg` found no UI, workflow or scheduler caller of the manual
+endpoint outside `scoring.service.test.ts`; its route has one commit (`ce0e569`).
+
+Still open (not decided at this gate): target tournaments versus `TOURNAMENT_IDS`,
+behavior when the provider corrects a result after scoring, and handling of cancelled
+or postponed matches (PRD FR-010).

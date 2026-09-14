@@ -5,10 +5,12 @@ git_commit: 466c7c2af2c955e8525f225e75ca25194165e1f0
 branch: 10xArchitect_cert
 repository: betMate
 topic: "Refactor opportunities in the finished-match → scoring → leaderboard flow"
-tags: [research, refactor-opportunities, scoring, sync-matches, leaderboard, supabase]
+tags: [research, refactor-opportunities, scoring, sync-matches, leaderboard, supabase, verified]
 status: complete
 last_updated: 2026-09-14
 last_updated_by: Jarosław Latek
+last_updated_note: "Structural claims verified with ast-grep 0.45.3 (m4l4-3); zeros confirmed with rg"
+verified_at_commit: d08885de73a47771433b8fa13d5653b4c2be5610
 ---
 
 # Research: Refactor opportunities in the scoring flow
@@ -123,7 +125,9 @@ unsafe without C2.
   module-private). Both re-declare `UnscoredMatch` and `BetToScore`
   (`scoring.service.ts:6-16`; `index.ts:118-128`) and use the identical comparison
   `bet.picked_result === match.result` with the shared constant
-  (`scoring.service.ts:125-127`; `index.ts:208,217`).
+  (`scoring.service.ts:125-127`; `index.ts:208,217`). The same comparison exists in 3
+  places (raport: 2 runtimes): the third is the hit/miss display rule
+  `src/lib/utils/bet-utils.ts:66`.
 - **Evidence:** the error semantics diverge. A match-fetch error throws in Node (route
   returns 500) but returns early in Edge with HTTP 200. An UPSERT error aborts the match
   and leaves it unflagged in Node (`:80-82,139-142`), while Edge continues and flags it
@@ -165,7 +169,8 @@ string[]` vs `errors: number`).
   (`scoring.service.test.ts`). The Edge copy has none.
 - **Evidence:** Vitest `include` is `src/**` only (`vitest.config.ts:8`).
 - **Evidence:** `tsconfig` allows `.ts` extension imports
-  (`astro/tsconfigs/base.json:10`, via the project `tsconfig.json`).
+  (`astro/tsconfigs/base.json:10`, via `tsconfig.json:2` → `astro/tsconfigs/strict`
+  (raport: via the project `tsconfig.json`)).
 - **Evidence:** `deno check --no-lock` on `sync-matches/index.ts` passes, including the
   cross-directory import.
 - **Unknown:** whether `supabase functions deploy` bundles `../../../src/...`. No deploy
@@ -235,7 +240,9 @@ DO UPDATE SET points = scores.points + points_to_add`; "Each match processed in 
   2.72.7, linked project), but there is no `seed.sql`, no `supabase/tests`, no
   type-generation script, and no CI job for DB tests.
 - **Inference:** the hosted `integration` E2E database is unsuitable for this, because
-  E2E teardown deletes **all** bets (`tests/e2e/global-teardown.ts:62-67`).
+  E2E teardown deletes **all** bets (`tests/e2e/global-teardown.ts:64` (raport: 62-67))
+  whenever `SUPABASE_SERVICE_ROLE_KEY` is set (`:20-21`), which the CI E2E job does
+  (`.github/workflows/pull-request.yml:50`).
 - **Evidence:** the Edge client is untyped (`index.ts:522`), so a DB function can be
   called from Edge without regenerating types.
 - **Existing vs new abstraction:** new. It needs a migration adding a DB-side function
@@ -350,7 +357,8 @@ user_id asc` with `.range(offset, offset + limit - 1)`, then ranks that page fro
 - **Evidence:** the sticky row is `entries.find(user_id === currentUserId)` over loaded
   entries only (`useLeaderboard.ts:41`). The header shows `entries.length` as the
   participant count, not `pagination.total` (`LeaderboardView.tsx:121`). There is no
-  "my rank" endpoint; `ProfileStatsDTO.rank` is declared but unused (`src/types.ts`).
+  "my rank" endpoint; `ProfileStatsDTO.rank` is declared but unused (`src/types.ts:178`
+  (raport: `src/types.ts`)).
 - **Unknown:** current production row counts per tournament, so whether the defect is
   reachable today.
 
@@ -501,7 +509,9 @@ or RPC with `RANK()` would need a migration and type regeneration.
     service-role key.
   - **Evidence:** setup seeds a 10-point `scores` row, masking C6, and checks existence by
     selecting a non-existent `scores.id` (`global-setup.ts:104-117`).
-  - **Evidence:** teardown deletes all `bets` (`global-teardown.ts:62-67`).
+  - **Evidence:** teardown deletes all `bets` (`global-teardown.ts:64` (raport: 62-67))
+    when `SUPABASE_SERVICE_ROLE_KEY` is set (`:20-21`); CI sets it
+    (`pull-request.yml:50`).
   - **Evidence:** leaderboard specs assert neither points nor rank.
 - **Deno and local Supabase:**
   - **Evidence:** `deno check` passes locally, but there is no Deno test task.
@@ -649,6 +659,94 @@ or RPC with `RANK()` would need a migration and type regeneration.
 | Derived aggregate instead of `scores` counter        | Would collapse C2, C5 and C6, but it reverses the conscious denormalization decision (`.ai/db-plan.md:135,398`) and depends on the undecided result-correction rule (P16). A data-model redesign, not an incremental refactor.                                                                         |
 | P17 cancelled/postponed handling                     | Not structural. Voiding bets, re-polling postponed matches and reopening betting are business rules (PRD FR-010 is broader than db-plan/api-plan). The shape findings (postponed never re-polled; no `void` status) are recorded for M4L5.                                                             |
 | P15 unknown status fallback                          | A provider-translation concern. It belongs to the anti-corruption-layer analysis (M4L5, `context/domain/03-anti-corruption-layer.md`).                                                                                                                                                                 |
+
+## Weryfikacja twierdzeń (ast-grep)
+
+Verified at commit `d08885d` with `ast-grep 0.45.3` (`npx -p @ast-grep/cli@0.45.3`).
+
+Method notes:
+
+- Pattern queries use `ast-grep run --json=stream` and report the start line of each
+  match. Relational rules (`inside`, `has`) use `ast-grep scan --inline-rules`.
+- Combining `run -l ts` with `--inline-rules` returned nothing silently. Every
+  relational rule was therefore checked with a positive control before its zero was
+  trusted.
+- Every ast-grep zero was repeated with `rg`, `awk` or a direct read. SQL, YAML and TOML
+  have no built-in ast-grep grammar and were checked with `rg`.
+- Unit counts were cross-checked with `npx vitest run` (3 files, 49 tests).
+
+Line numbers refer to the start of the matched expression.
+
+### Ranking #1 — one tested production scoring orchestration (C1 + C4)
+
+| #   | Claim                                                                                        | Verdict                           | Evidence (file:line)                                                                                                                                              | Method                                                                                                               |
+| --- | -------------------------------------------------------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| V1  | Correct-bet equality is duplicated in both runtimes                                          | **doprecyzowane:** 3 sites, not 2 | `scoring.service.ts:125`, `sync-matches/index.ts:208`, `bet-utils.ts:66` (display hit/miss)                                                                       | `run -p '$A.picked_result === $B.result'`                                                                            |
+| V2  | `pointsForBet` has no production caller                                                      | potwierdzone                      | 5 calls, all in `score-rule.test.ts:14,19,20,21,26`                                                                                                               | `run -p 'pointsForBet($$$)'`                                                                                         |
+| V3  | Both runtimes import `POINTS_FOR_CORRECT_BET`                                                | potwierdzone                      | `scoring.service.ts:4`, `index.ts:19`                                                                                                                             | `run -p 'import { POINTS_FOR_CORRECT_BET } from $P'`                                                                 |
+| V4  | `sync-matches/index.ts` has no exports and a top-level `Deno.serve`                          | potwierdzone                      | exports: 0 (`rg '^\s*export\b'` also 0). `Deno.serve`: 1, `index.ts:492`                                                                                          | `run -p 'export $$$'`; `run -p 'Deno.serve($$$)'`                                                                    |
+| V5  | `scoreFinishedMatches` has a single caller                                                   | potwierdzone                      | `index.ts:532`                                                                                                                                                    | `run -p 'scoreFinishedMatches($$$)'`                                                                                 |
+| V6  | `scoreMatches` has one production caller; all others are tests                               | potwierdzone                      | `score-matches.ts:52`, plus 19 calls in `scoring.service.test.ts`                                                                                                 | `run -p 'scoreMatches($$$)'`                                                                                         |
+| V7  | 19 of 49 unit tests target the Node scoring copy                                             | potwierdzone                      | `it()` counts: `scoring.service.test.ts` 19, `score-rule.test.ts` 4, `bet.service.test.ts` 26. `vitest run`: 49 passed                                            | `run -p 'it($N, $$$)'` per file + `npx vitest run`                                                                   |
+| V8  | `UnscoredMatch` and `BetToScore` are re-declared in both runtimes                            | potwierdzone                      | 2+2: `scoring.service.ts:6,12`, `index.ts:118,124`                                                                                                                | `run -p 'interface UnscoredMatch { $$$ }'` (and `BetToScore`)                                                        |
+| V9  | `ScoreMatchesCommand` is unused; `ScoreMatchesResponseDTO` is used only by the Node service  | potwierdzone                      | `types.ts:384` (declaration only). `types.ts:395`, `scoring.service.ts:3,103,104`                                                                                 | `rg` (identifier patterns do not match TS type positions)                                                            |
+| V10 | Manual route checks authentication only; no role or admin check exists                       | potwierdzone                      | `score-matches.ts:16` (`getUser`). Role/`app_metadata`/`isAdmin` in `src`: 0 (only `user_metadata?.username` in 3 `.astro` pages). `admin` in `src/middleware`: 0 | `run -p '$C.auth.getUser()'`; `rg`                                                                                   |
+| V11 | The only Node Supabase client factory is the cookie session client; no service role in `src` | potwierdzone                      | `supabase.server.ts:35`. `SERVICE_ROLE` in `src`: 0                                                                                                               | `run -p 'createServerClient<$T>($$$)'` (plain pattern gave 0 because of the generic; `rg` found the same site); `rg` |
+| V12 | Vitest collects only `src/**`                                                                | potwierdzone                      | `vitest.config.ts:8`                                                                                                                                              | `rg` (config)                                                                                                        |
+| V13 | `.ts`-extension imports are allowed by the TS config                                         | doprecyzowane                     | `tsconfig.json:2` extends `astro/tsconfigs/strict`; `astro/tsconfigs/base.json:10` sets `allowImportingTsExtensions`                                              | `rg` (JSON)                                                                                                          |
+| V14 | `deno check` passes with the cross-directory import                                          | potwierdzone                      | `deno check --no-lock sync-matches/index.ts` → exit 0                                                                                                             | tool run                                                                                                             |
+
+### Ranking #2 — DB-side atomic, idempotent scoring unit (C2, subsuming C3)
+
+| #   | Claim                                                                                                     | Verdict                                       | Evidence (file:line)                                                                                                                                                                                                                                       | Method                                                                                      |
+| --- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| V15 | No DB RPC/transaction boundary is used                                                                    | potwierdzone                                  | 0 calls; `rg '\.rpc\s*\('` also 0                                                                                                                                                                                                                          | `run -p '$C.rpc($$$)'`                                                                      |
+| V16 | Score read destructures only `data`; its error is ignored                                                 | potwierdzone                                  | 2 sites: `scoring.service.ts:59`, `index.ts:210`. Variant with `error` destructured: 0 (`rg -U` also 0)                                                                                                                                                    | `run -p 'const { data: $D } = await $S.from("scores").select($F).eq($$$).eq($$$).single()'` |
+| V17 | The mark update filters on `id` only (no compare-and-set)                                                 | potwierdzone                                  | 2 sites: `scoring.service.ts:89`, `index.ts:240`. Guarded variant: 0. The `rg` hits for `is_scored", false` are SELECT filters (`scoring.service.ts:26`, `index.ts:175`)                                                                                   | `run -p '$S.from("matches").update({ is_scored: true }).eq("id", $X)'`                      |
+| V18 | `scores` writers are exactly two UPSERTs plus the E2E insert                                              | potwierdzone                                  | UPSERT: `scoring.service.ts:68`, `index.ts:219`. INSERT: `tests/e2e/global-setup.ts:113`                                                                                                                                                                   | `run -p '$S.from("scores").upsert($$$)'` / `.insert($$$)`                                   |
+| V19 | Edge marks the match without any condition, after the bets loop                                           | potwierdzone                                  | Mark inside `for…of`: `index.ts:240`. Inside any `if`: 0 (control: Node `markMatchAsScored` inside `if` → `scoring.service.ts:135`). Indentation read at `index.ts:236-240` confirms loop-body level                                                       | `scan` rules `inside: for_in_statement` / `inside: if_statement, stopBy: end`               |
+| V20 | Edge UPSERT-error branch does not skip the mark                                                           | potwierdzone                                  | `continue/break/return` inside `if (upsertError)`: 0 (control: `continue` inside `if (betsError)` → `index.ts:203`); `rg` over `index.ts:229-236` also 0                                                                                                   | `scan` rule `any: [continue, break, return]` inside `if` has `upsertError`                  |
+| V21 | Node UPSERT error throws, and the mark call sits inside the per-match `try` (so it is skipped)            | potwierdzone                                  | throw: `scoring.service.ts:81`; `markMatchAsScored` inside `try_statement`: `:135`                                                                                                                                                                         | `scan` rules `throw_statement inside upsertScore`, `pattern inside try_statement`           |
+| V22 | Scoring selects are unpaginated                                                                           | potwierdzone                                  | `.range/.limit` inside `scoreFinishedMatches`/`getUnscoredMatches`/`getBetsForMatch`/`scoreMatches`: 0 (control: `getLeaderboard` → `leaderboard.service.ts:88`); `awk` over both ranges also 0                                                            | `scan` rule `any: [range, limit] inside function_declaration name`                          |
+| V23 | Local `max_rows = 1000`                                                                                   | potwierdzone                                  | `supabase/config.toml:18`                                                                                                                                                                                                                                  | `rg` (TOML)                                                                                 |
+| V24 | Migrations contain no scoring SQL function; only `handle_new_user`/`handle_updated_at` and their triggers | potwierdzone                                  | `initial_schema.sql:329,346,359,371,376`; `fix_function_search_path.sql:19,42`                                                                                                                                                                             | `rg -i 'create (or replace )?(function\|trigger\|view)'` (SQL)                              |
+| V25 | E2E teardown deletes all bets                                                                             | **doprecyzowane:** conditional; applies in CI | `global-teardown.ts:64` (raport: 62-67), only when `SUPABASE_SERVICE_ROLE_KEY` is set (`:20-21`); CI sets it (`pull-request.yml:50`). The pattern with literal `from("bets")` gave 0 because the table name is dynamic (`from(table.name)`); read directly | `run -p '$S.from("bets").delete().gte("id", 1)'` → 0; `rg` + read                           |
+| V26 | E2E setup checks existence via the non-existent `scores.id`                                               | potwierdzone                                  | select: `global-setup.ts:105`; `scores` has no `id` column (`initial_schema.sql:153-159`)                                                                                                                                                                  | `run -p '$S.from("scores").select("id")'`; read of DDL                                      |
+| V27 | CI runs only on PRs to `main`, with no typecheck/build/deno step                                          | potwierdzone                                  | `pull-request.yml:4-5`; `run:` steps `:18,31,64,67,82`; `tsc\|astro check\|typecheck\|build\|deno` match only the workflow name (`:1`)                                                                                                                     | `rg` (YAML)                                                                                 |
+
+### Ranking #3 — database-consistent rank before pagination (C5)
+
+| #   | Claim                                                               | Verdict              | Evidence (file:line)                                                                                     | Method                                                                                      |
+| --- | ------------------------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| V28 | Pagination precedes in-memory ranking                               | potwierdzone         | `.range(...)` chain `leaderboard.service.ts:88` (call at `:94`); `calculateRanks(entries)` `:109`        | `run -p '$A.range($$$)'`, `run -p 'calculateRanks($E)'`                                     |
+| V29 | `calculateRanks` is pure and not exported                           | potwierdzone         | declaration `leaderboard.service.ts:42`; inside `export_statement`: 0; `rg 'export … calculateRanks'`: 0 | `run -p 'function calculateRanks($$$): $R { $$$ }'`; `scan` rule `inside: export_statement` |
+| V30 | A count-style query precedent exists for a no-migration rank offset | potwierdzone         | `leaderboard.service.ts:26`                                                                              | `run -p '$S.from("scores").select("*", { count: "exact", head: true })'`                    |
+| V31 | Load-more appends the next page's entries unchanged                 | potwierdzone         | `useLeaderboard.ts:75`                                                                                   | `run -p 'setEntries(($P) => [...$P, ...$R.data])'`                                          |
+| V32 | Rank is rendered verbatim in the row and the sticky row             | potwierdzone         | `LeaderboardRow.tsx:10`, `StickyUserRow.tsx:21`                                                          | `run -l tsx -p 'entry.rank'` / `'userEntry.rank'` (the `{…}` JSX form gave 0)               |
+| V33 | Sticky entry and participant count come from loaded entries         | potwierdzone         | `useLeaderboard.ts:41` (`entries.find`), `LeaderboardView.tsx:121` (`entries.length`)                    | `run -p 'entries.find($$$)'`, `run -p 'entries.length'`                                     |
+| V34 | Page size 100 by default (max 500)                                  | potwierdzone         | `useLeaderboard.ts:5`; `leaderboard.validation.ts:20-21`                                                 | `run -p 'const DEFAULT_LIMIT = $N'`; `rg`                                                   |
+| V35 | No test covers the leaderboard                                      | potwierdzone         | test/spec files under `src` mentioning `leaderboard`: 0                                                  | `rg -l` over `*.test.ts`/`*.spec.ts`                                                        |
+| V36 | `ProfileStatsDTO.rank` is declared but not produced                 | doprecyzowane (line) | `src/types.ts:178` (raport: `src/types.ts`)                                                              | `rg`                                                                                        |
+
+### Rejected candidates (supporting claims)
+
+| #   | Claim                                                                                     | Verdict      | Evidence (file:line)                                                                              | Method                                                                                                                           |
+| --- | ----------------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| V37 | C6: both scoring UPSERTs sit inside the correct-pick branch                               | potwierdzone | `scoring.service.ts:127` (`upsertScore`), `index.ts:219`                                          | `scan` rule `inside: if_statement has picked_result === …result`                                                                 |
+| V38 | C7: outcome literals are hard-coded in zod; `Constants` used once; Edge has its own union | potwierdzone | `bet.validation.ts:11,29`; `matches.validation.ts:4`; `index.ts:30`                               | `run -p 'z.enum(["HOME_WIN", "DRAW", "AWAY_WIN"], $$$)'`, `run -p 'Constants.public.Enums.$E'`, `run -p 'type MatchOutcome = …'` |
+| V39 | P17: no `void` bet display status exists                                                  | potwierdzone | `BetDisplayStatus = "pending" \| "hit" \| "miss"` at `bet-utils.ts:47`; `"void"`: 0, `rg void`: 0 | `run -p 'type BetDisplayStatus = $T'`, `run -p '"void"'`; `rg`                                                                   |
+
+### Findings relevant to ranking positions
+
+No claim was rejected, and no candidate's position depends on a disproved number.
+
+- **V1 — do decyzji na etapie planowania.** The correct-bet decision exists a third time, in
+  the UI hit/miss rule (`bet-utils.ts:66`). Ranking #1's blast radius does not list
+  `bet-utils.ts`. Planning must decide whether the display rule joins the shared rule
+  (`pointsForBet`), or stays explicitly out of scope.
+- **V25 — do decyzji na etapie planowania.** The destructive teardown is conditional on the
+  service-role key. It does apply in CI, so ranking #2's "isolated integration harness"
+  prerequisite still stands. A local run without the key is RLS-limited to the test user.
 
 ## Code References
 

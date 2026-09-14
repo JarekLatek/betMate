@@ -15,7 +15,7 @@ Obecnie organizacja towarzyskich zakładów sportowych jest procesem nieefektywn
 - FR-003: Interfejs umożliwiający zalogowanym użytkownikom obstawianie wyników meczów (wygrana gospodarzy, remis, wygrana gości).
 - FR-004: Możliwość edycji postawionych typów do 5 minut przed oficjalnym rozpoczęciem meczu.
 - FR-005: Automatyczna blokada możliwości obstawiania i edytowania typów na 5 minut przed rozpoczęciem spotkania.
-- FR-006: Automatyczne obliczanie punktów (1 punkt za trafiony wynik W/D/W) za pomocą cyklicznej funkcji (Supabase Edge Function uruchamiana co 2 godziny), która pobiera wyniki zakończonych meczów.
+- FR-006: Automatyczne obliczanie punktów (3 punkty za trafiony wynik W/D/W) za pomocą cyklicznej funkcji (Supabase Edge Function uruchamiana co 2 godziny), która pobiera wyniki zakończonych meczów.
 - FR-007: Publiczna tablica wyników (Leaderboard) dla każdego turnieju, prezentująca ranking użytkowników na podstawie zdobytych punktów.
 - FR-008: Możliwość przełączania się między widokami dostępnych turniejów i ich oddzielnymi rankingami.
 - FR-009: Prosta strona informacyjna lub okno modalne wyjaśniające zasady gry i system punktacji.
@@ -100,7 +100,7 @@ Następujące funkcjonalności nie wchodzą w zakres wersji MVP, aby zapewnić s
 - Kryteria akceptacji:
   - Funkcja uruchamiana co 2 godziny pobiera wyniki zakończonych meczów z API.
   - Dla każdego zakończonego meczu system porównuje zapisane typy użytkowników z faktycznym wynikiem.
-  - Użytkownik otrzymuje 1 punkt za prawidłowe wytypowanie wyniku (W/D/W) i 0 punktów za błędny typ.
+  - Użytkownik otrzymuje 3 punkty za prawidłowe wytypowanie wyniku (W/D/W) i 0 punktów za błędny typ.
   - Punkty są sumowane i ranking jest aktualizowany.
   - Mecze bez oficjalnego wyniku (np. oczekujące na aktualizację w API) są ignorowane w danym cyklu.
 
@@ -109,7 +109,7 @@ Następujące funkcjonalności nie wchodzą w zakres wersji MVP, aby zapewnić s
 - Opis: Jako użytkownik, chcę mieć łatwy dostęp do jasnych i zwięzłych zasad gry oraz systemu punktacji, abym wiedział, jak zdobywać punkty.
 - Kryteria akceptacji:
   - W aplikacji znajduje się link lub przycisk prowadzący do strony/okna modalnego z zasadami.
-  - Treść wyjaśnia system punktacji (1 pkt za W/D/W), zasady blokowania typów oraz obsługę meczów odwołanych.
+  - Treść wyjaśnia system punktacji (3 pkt za W/D/W), zasady blokowania typów oraz obsługę meczów odwołanych.
 
 - ID: US-010
 - Tytuł: Obsługa meczów odwołanych lub przełożonych

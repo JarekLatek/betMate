@@ -1,89 +1,127 @@
-# betMate — Repo Map (onboarding)
+# betMate — Project Map
 
-> Synthesized from `artifact-1-territory.md` (git history), `artifact-2-structure.md` (layering), `artifact-3-contributors.md` (authorship). Activity/structure window: last 12 months.
+> Wide Scan refreshed on 2026-09-14 at commit `c323606`. Evidence details:
+> `artifact-1-territory.md`, `artifact-2-structure.md`,
+> `artifact-3-contributors.md`.
 
 ## 1. TL;DR
 
-betMate is a football-betting web app (Astro 5 SSR + React 19 + TypeScript + Tailwind 4 + Supabase) where users bet on matches and compete on per-tournament leaderboards. It is a **clean layered system with no dependency cycles**: React components talk to the server only through `lib/api` fetch wrappers → Zod-validated `pages/api/**` endpoints → `lib/services/*` → `src/db` (Supabase). Match data is ingested by a **separate Deno Edge Function `sync-matches`** that shares no code with the app — its only contract is the database schema. Work peaked Oct–Dec 2025 (feature build) and has since shifted to E2E + CI/CD; the repo is in **stabilization**, not active feature growth. It is effectively a **solo project** (Jarek = 130/131 human commits), so knowledge lives in `.ai/` and `.planning/` docs, not in people. The MVP is complete; the remaining work to run live for **FIFA World Cup 2026** is the profile feature, a couple of v1.1 endpoints, dark-mode verification, and production/live-sync ops.
+betMate is a small football-prediction application built with Astro 6.4.8, React 19,
+TypeScript, Tailwind and Supabase. Its core user flow is match ingestion → W/D/W bet →
+score calculation → tournament leaderboard. The analyzed TS/TSX graph contains 78
+modules and 190 dependencies with no cycles or configured layer violations, although
+`.astro` composition and database/runtime edges require separate evidence. Development
+was seasonal: product work peaked in Q4 2025, E2E/CI dominated Q1 2026, and production
+code has barely changed since the scoring extraction in June. The highest-risk path is
+split between a Node scoring service and the Deno `sync-matches` function: they share a
+points constant but still duplicate non-atomic scoring orchestration. Documentation and
+runtime configuration also disagree about the points rule and target tournaments, so
+those are decision/operations gaps rather than facts the map can silently resolve.
 
 ```mermaid
 flowchart TD
-  subgraph Client
-    C["React components"] --> CA["lib/api/* (fetch)"]
-  end
-  subgraph Server
-    CA -->|HTTP| API["pages/api/** (Zod)"]
-    AP["pages/*.astro"] --> S
-    API --> S["lib/services/*"]
-    MW["middleware (session)"] --> DB
-    S --> DB["db/supabase.server.ts"]
-  end
-  DB --> PG[("Supabase / Postgres")]
-  SYNC["sync-matches (Deno Edge Fn)"] --> PG
-  T["src/types.ts (shared vocabulary)"] -.-> API
-  T -.-> S
-  T -.-> C
+  Pages["Astro pages"] -->|server render| Services["lib/services"]
+  Pages --> React["React feature UI"]
+  React --> Hooks["hooks"]
+  Hooks --> ClientAPI["lib/api fetch wrappers"]
+  ClientAPI -->|HTTP| API["pages/api"]
+  API --> Services
+  Services --> PG[("Supabase / PostgreSQL")]
+  Auth["auth UI"] --> BrowserDB["browser Supabase client"] --> PG
+  Middleware --> ServerDB["server Supabase client"] --> PG
+  Edge["sync-matches / Deno"] --> PG
+  Edge --> Rule["shared points constant"]
+  Services --> Rule
 ```
 
-## 2. Territory — where the system lives
+## 2. Terrain
 
-**Deep / high-responsibility modules** (hot in git, central in graph):
-- `src/components/my-bets` — hottest feature area (betting UI: BetList, BetCard).
-- `src/components/matches` — match listing, coupled to `lib/api/matches.api`.
-- `src/lib/services` — the business-logic core (bet, scoring, leaderboard, matches, tournament).
-- `supabase/functions/sync-matches` — the data spine feeding every feature.
-- `tests/e2e/{specs,pages,fixtures}` — cohesive POM suite, the recent focus.
+| Area                                           | Role / depth                      | Change profile             | Why it matters                                                              |
+| ---------------------------------------------- | --------------------------------- | -------------------------- | --------------------------------------------------------------------------- |
+| `src/lib/services`                             | core, deep                        | seasonal; 8 commit touches | Server business orchestration for bets, matches, scoring and leaderboard    |
+| `supabase/functions/sync-matches`              | core, deep, load-bearing          | seasonal; 7 area touches   | Sole external match-data adapter and a production scoring entry point       |
+| `supabase/migrations` + `src/db`               | supporting contract, load-bearing | stable after MVP           | Schema, RLS and generated types couple both runtimes invisibly              |
+| `src/components/{matches,my-bets,leaderboard}` | core UI, locally deep             | volatile during Q4 build   | Delivers the main user flow; view roots have high outgoing coupling         |
+| `src/pages/api`                                | shallow HTTP entry layer          | seasonal                   | Validation/auth boundary delegating mostly to services                      |
+| `src/types.ts`                                 | supporting contract, load-bearing | low churn                  | Highest graph fan-in: 29 incoming modules                                   |
+| `src/components/ui` + `src/lib/utils.ts`       | peripheral/supporting, shallow    | stable                     | High reuse but little business depth; do not confuse fan-in with core logic |
+| `tests/e2e`                                    | test infrastructure               | Q1 campaign                | Broad POM suite, currently not part of the production dependency graph      |
 
-**Shallow / peripheral:** `src/components/ui` (Shadcn primitives — change rarely by intent), `src/layouts`, `lib/utils`.
+The directory tree overemphasizes UI file count. Operational and correctness risk is
+concentrated in the smaller scoring, sync, schema/RLS and session surfaces.
 
-**Where the directory tree misleads:** the structure looks UI-centric (most files under `components/`), but the **risk and value concentrate server-side** in `lib/services` (esp. scoring) and in `sync-matches` — areas with fewer files but the highest blast radius.
+## 3. Real couplings and entry points
 
-**Activity over time:** Oct–Dec 2025 = feature construction; Jan–Jun 2026 = E2E hardening + CI keep-alive. Feature dev has tapered.
+- **Graph:** `src/types.ts` has 29 incoming modules and
+  `src/db/database.types.ts` has 10. A change to generated schema vocabulary can move
+  through API, services and UI even when Git churn is low.
+- **Graph:** feature UI follows `components → hooks → lib/api`; API routes have seven
+  edges into `lib/services`. Auth is the deliberate exception and imports
+  `db/supabase.browser.ts` directly.
+- **Graph + code:** Node and Deno scoring both import
+  `src/lib/scoring/score-rule.ts`, but only the points constant is shared
+  (`scoring.service.ts:4,123-127`; `sync-matches/index.ts:17-19,206-240`).
+- **Git:** `components/matches ↔ lib/api`, `services ↔ pages/api`, and
+  `components/ui ↔ pages` each co-changed in three commits. These are small-sample
+  routing signals, not proof of bad design.
+- **Database/runtime, outside graph:** Edge Function, services and leaderboard couple
+  through `matches`, `bets`, `scores` and RLS. HTTP fetch calls and cron scheduling are
+  likewise invisible to static imports.
+- **Lexical verification:** `.astro` pages import React roots and call
+  `TournamentService` server-side (`index.astro:3-6`, `my-bets.astro:3-7`,
+  `leaderboard.astro:3-6`). Dependency-cruiser cannot see these edges.
 
-## 3. Real couplings (what actually moves together)
-
-- **`src/types.ts` is the universal connector** (import graph) — every layer depends on it; the safest place to *read*, the riskiest to *break*.
-- **`components/matches` ↔ `lib/api`** (git + imports) — match UI and its client API evolve together.
-- **auth is cross-cutting** (git): `components/auth` co-changes with `my-bets`, `db`, `pages`, `validation` — session touches many features via `middleware`.
-- **E2E suite is self-cohesive** (git): fixtures/pages/specs always change together — expected, low concern.
-- **Hidden coupling via the DB schema** (`unknown` to the import graph): `sync-matches`, `lib/services`, and the scoring path are coupled through table shapes, not code. The dependency view cannot see this — treat schema changes as wide-blast.
-- **No dependency cycles** detected in the layered graph.
+Primary entry points are `src/pages/*.astro`, nine HTTP handlers in eight files under
+`src/pages/api/**`, `src/middleware/index.ts:5`, and
+`supabase/functions/sync-matches/index.ts`.
 
 ## 4. Risk zones
 
-| Zone | Why it's risky for live World Cup use |
-|------|----------------------------------------|
-| `lib/services/scoring.service` | Computes points; a silent bug corrupts the leaderboard mid-tournament. Highest-stakes logic. |
-| `supabase/functions/sync-matches` | Sole live-data source; if it drifts/fails during matches, the whole app shows stale state. |
-| DB schema + migrations | Cross-cuts app + Edge Function via runtime coupling the import graph can't see. |
-| `middleware` + auth/session | Spreads across every authed route; a regression locks users out everywhere. |
-| `bet.service` + 5-min lock (RLS) | Core fairness rule (no bets <5 min pre-match); enforced in DB — must hold under real load. |
-| Production/ops (deploy, cron, env) | Not represented in code yet; the gap between "MVP done" and "runs live during WC2026". |
+| Zone                            | Evidence and caution before change                                                                                                                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scoring consistency/concurrency | Both runtimes perform SELECT-then-UPSERT and award-before-flag in separate calls (`scoring.service.ts:52-93,117-136`; Edge `:165-255`). Partial or concurrent runs can lose or duplicate points.                                         |
+| Match ingestion / external API  | `sync-matches` maps provider statuses and results (`:28-70`) and is the only ingestion adapter. Static analysis cannot validate live API shape, secrets, cron or deploy behavior.                                                        |
+| Product/config drift            | PRD/README say World Cup 2026 and one point; code/decision docs use three points, while `TOURNAMENT_IDS` currently lists Champions League and Europa League (`sync-matches/index.ts:21-26`). Requires owner confirmation, not inference. |
+| Bet fairness and ownership      | Authoritative five-minute and own-user rules live in RLS (`initial_schema.sql:230-296`); application update/delete checks use a separate JS clock, while create relies on DB enforcement. Verify with a real database before changing.   |
+| Scoring trigger authorization   | `/api/admin/score-matches` checks authentication but no admin role (`score-matches.ts:11-23,50-52`). Any authenticated-user trigger is a high-impact surface.                                                                            |
+| Shared DB/DTO contract          | `src/types.ts` derives entities/enums from generated DB types (`src/types.ts:1-55`). Migration, type regeneration, services and Edge must be reviewed as one blast radius.                                                               |
 
 ## 5. Who to ask
 
-Solo repo — **Jarek owns every zone.** There is no routing to do. Substitute for tribal knowledge, per zone:
-- scoring / bets → `.ai/post-api-bets-implementation-plan.md`, `.ai/db-plan.md`
-- matches / sync → `.ai/get-matches-implementation-plan.md`, `supabase/functions/sync-matches/` + `CLAUDE.md`
-- auth → `.ai/auth-spec.md`, `.ai/auth-view-implementation-plan.md`
-- leaderboard → `.ai/get-tournaments-id-leaderboard-implementation-plan.md`
-- anything → `.ai/prd.md` + `.planning/.statusy-i-podsumowania/`
+The 12-month window has one human contributor: **Jarosław Latek (Jarek)** authored all
+136 human commits. Ask Jarek for every risk zone; Git cannot provide team-level routing.
+Use the repository as supporting memory:
 
-## 6. First day — read these 5–8 first
+- scoring/bet-lock → `context/changes/testing-scoring-bet-lock-core/`
+- product behavior → `.ai/prd.md`
+- schema/API intent → `.ai/db-plan.md`, `.ai/api-plan.md`
+- auth/session → `.ai/auth-spec.md`
+- test operations → `tests/e2e/E2E-README.md`, `.github/workflows/`
 
-1. `CLAUDE.md` — architecture rules of record (client/server split, API conventions).
-2. `.ai/prd.md` — product scope and rules.
-3. `src/types.ts` — the shared vocabulary every layer uses.
-4. `src/middleware/index.ts` — how session/auth gates requests.
-5. `src/lib/services/scoring.service.ts` — the highest-stakes logic.
-6. `supabase/functions/sync-matches/index.ts` — how live data enters the system (`full` vs `live` modes).
-7. `src/db/supabase.server.ts` + `src/db/supabase.browser.ts` — the two-client rule that shapes everything.
-8. `tests/e2e/specs/betting.spec.ts` — the betting happy-path as executable spec.
+Where these disagree, record a user decision instead of choosing the newest prose
+automatically.
 
-## 7. Limitations
+## 6. First day: read in this order
 
-- Activity/structure reflect a **12-month window** — this is *where work happened* and *how code is wired*, not a correctness audit.
-- **Solo authorship**: git ownership carries no division-of-labor signal; contributor mapping is N/A.
-- Static import analysis only — **runtime coupling through the database schema is `unknown` to the graph** and called out explicitly above (not "no coupling").
-- `dependency-cruiser` was not run mechanically; the no-cycles claim is from import analysis of a small repo. Command to verify is in `artifact-2-structure.md`.
-- **Roadmap correction discovered while mapping:** `DELETE /api/bets/:id` is already implemented (project memory listed it as remaining). Real remaining gaps: profile endpoints (`/api/me/profile`, `/api/profiles/:username`), `GET /api/matches/:id`, dark-mode verification, and production/live-sync ops.
+1. `.ai/prd.md` — intended product rules; note known drift before trusting numbers.
+2. `src/types.ts` — shared DTO and domain vocabulary with the highest graph fan-in.
+3. `supabase/migrations/20251028120000_initial_schema.sql` — tables, constraints and RLS.
+4. `src/middleware/index.ts` plus `src/db/supabase.server.ts` and
+   `src/db/supabase.browser.ts` — the request/session and two-client split.
+5. `supabase/functions/sync-matches/index.ts` — external ingestion and production scoring.
+6. `src/lib/services/scoring.service.ts` and `src/lib/scoring/score-rule.ts` — second
+   scoring entry and the only shared rule fragment.
+7. `src/lib/services/bet.service.ts` — core bet lifecycle and application-side lock.
+8. `tests/e2e/specs/betting.spec.ts` plus the three unit suites under `src/lib` —
+   executable behavior and current coverage boundary.
+
+## 7. Limits and unknowns
+
+- Activity covers one year and measures touches, not correctness or business value.
+- The import graph excludes `.astro`, tests, external packages, SQL behavior, HTTP,
+  cron and runtime configuration. Missing graph edges are explicitly not “no coupling”.
+- No live Supabase/API-Football request or deployment verification was performed.
+- Solo authorship makes contributor mapping a knowledge-concentration warning, not an
+  ownership matrix.
+- `GET /api/matches/[id]` is described by `MatchDetailDTO` but has no route; profile
+  endpoints are also absent. Whether these remain roadmap items is an owner decision.

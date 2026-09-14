@@ -1,76 +1,139 @@
-# Artifact 2 — Structure (dependency / layering)
+# Artifact 2 — Structure (dependency graph and boundaries)
 
-Method: static import analysis over `@/*` aliases (betMate is a small Astro+React app, not a monorepo, so the course's `dependency-cruiser` monorepo prompts were adapted to the real layout). Full `dependency-cruiser` run noted as optional next step below.
+Analysis date: **2026-09-14**
 
-## Key observations
+Baseline commit: `c323606243a04008a0a925ff2335d5a496af6dd1`
 
-1. **Clean layered architecture, no back-edges.** `lib/*` never imports `components/*` or `pages/*` (verified). Server and client paths are properly separated.
-2. **Two parallel paths split by Supabase client** — the central architectural rule. Server code goes through `db/supabase.server.ts`; React goes through `lib/api/*` → HTTP → endpoints → `db/supabase.server.ts`. The browser never touches services or the DB directly.
-3. **`src/types.ts` is the universal connector** — imported by api (5×), services (7×), components (5×). The shared vocabulary; the one file every layer depends on.
-4. **No dependency cycles found** in the layered graph (acyclic: pages → services → db; components → lib/api → endpoints).
-5. **`sync-matches` Edge Function is an isolated subsystem** (Deno runtime, own import map) — writes the DB but shares no code with the app. Its only contract with the app is the database schema.
+## Method
 
-## Layer map
+The application graph was generated mechanically with `dependency-cruiser` 18.3.0 on
+Node 22.14.0 using `tsconfig.json` path resolution. The reproducible gate is:
 
-| Layer | Path | Imports (allowed) | Notes |
-|-------|------|-------------------|-------|
-| Routes (server) | `src/pages/*.astro`, `src/pages/api/**` | services, validation, types, utils | Zod-validated; `prerender = false` |
-| Services (server) | `src/lib/services/**` | `db/database.types`, types, validation | business logic; hits Supabase server client |
-| DB | `src/db/**` | — | `supabase.server.ts` (SSR), `supabase.browser.ts` (client), `database.types.ts` |
-| Client API | `src/lib/api/**` | types | browser `fetch` wrappers → endpoints |
-| Components (client) | `src/components/**` | `lib/api`, `lib/utils`, `components/ui`, `hooks`, types | React; never imports services/db |
-| Shared | `src/types.ts`, `src/lib/validation/**`, `src/lib/utils/**` | — | cross-cutting |
-| Middleware | `src/middleware/index.ts` | db (server) | session on every request |
-| Ingestion | `supabase/functions/sync-matches` | (Deno, isolated) | separate runtime |
+```bash
+npm run deps:check
+```
+
+It analyzes `src` plus `supabase/functions/sync-matches/index.ts`, excludes unit-test
+files and external modules, and enforces cycles, resolvable local imports and three
+client/server boundary rules from `.dependency-cruiser.cjs`.
+
+Result: **78 modules, 190 dependencies, 0 errors, 0 warnings and no cycles** in the
+analyzed TS/TSX graph.
+
+Important limitation: `dependency-cruiser` does not parse `.astro` files. Imports from
+Astro pages were therefore verified separately with `rg '^import ' src/pages
+src/layouts --glob '*.astro'`. They are evidence from lexical search, not edges from
+the dependency graph.
+
+## Architectural shape
 
 ```mermaid
 flowchart TD
-  Browser["React components"] --> ClientAPI["lib/api/* (fetch)"]
-  ClientAPI -->|HTTP| API["pages/api/** (Zod)"]
-  AstroPages["pages/*.astro"] --> Services
-  API --> Services["lib/services/*"]
-  Services --> DB["db/supabase.server.ts"]
-  MW["middleware"] --> DB
-  DB --> PG[("Supabase / Postgres")]
-  Sync["sync-matches (Deno Edge Fn)"] --> PG
-  Types["src/types.ts"] -.shared.- API
-  Types -.shared.- Services
-  Types -.shared.- Browser
+  Astro["Astro pages (.astro)"] -->|rg evidence| React["React feature components"]
+  Astro -->|server-side, rg evidence| Services["lib/services"]
+  React --> Hooks["components/hooks"]
+  Hooks --> ClientAPI["lib/api fetch wrappers"]
+  ClientAPI -->|HTTP runtime edge| API["pages/api"]
+  API --> Services
+  Services -->|injected SupabaseClient| PG[("Supabase / PostgreSQL")]
+  AuthUI["auth components"] --> BrowserDB["db/supabase.browser.ts"]
+  BrowserDB --> PG
+  Middleware["middleware"] --> ServerDB["db/supabase.server.ts"]
+  ServerDB --> PG
+  Edge["sync-matches Edge Function"] --> PG
+  Edge --> Rule["lib/scoring/score-rule.ts"]
+  Services --> Rule
+  Types["src/types.ts"] --> DBTypes["db/database.types.ts"]
 ```
 
-## Endpoint inventory (verified against `src/pages/api/`)
+There are two deliberate client paths:
 
-| Endpoint | Methods present | Status vs. roadmap |
-|----------|-----------------|--------------------|
-| `/api/bets` | POST | done |
-| `/api/bets/[id]` | **PUT, DELETE** | ✅ `DELETE` (was listed as remaining phase-4) is **already implemented** |
-| `/api/matches` | GET (collection) | done |
-| `/api/matches/[id]` | — | ❌ **missing** (phase-4 `GET /api/matches/:id` not built) |
-| `/api/me/bets` | GET | done |
-| `/api/me/profile` | — | ❌ **missing** (profile feature) |
-| `/api/profiles/[username]` | — | ❌ **missing** (profile feature) |
-| `/api/tournaments` | GET | done |
-| `/api/tournaments/[tournament_id]/leaderboard` | GET | done |
-| `/api/auth/check-username` | — | done |
-| `/api/admin/score-matches` | — | scoring trigger |
+1. Match, bet-history and leaderboard React features use hooks and `lib/api` fetch
+   wrappers before crossing HTTP into API routes.
+2. Authentication components use `db/supabase.browser.ts` directly for Supabase Auth.
 
-**Map correction to project memory:** `DELETE /api/bets/:id` is **done**, not remaining. The real gaps are the **profile endpoints** and **`GET /api/matches/:id`**.
+This corrects the previous map's over-broad claim that the browser never touches a
+Supabase client directly.
 
-## Testability risks
+## Graph centres and thin entry points
 
-- **Services are the testable core** and already have tests (`bet.service.test.ts`, `scoring.service.test.ts`) — they depend only on db types + validation, so they mock cleanly. Good.
-- **`scoring.service`** is the highest-stakes untested-path risk for live use: it computes points; a bug silently corrupts the leaderboard during the tournament. Strong unit + integration coverage warranted.
-- **`sync-matches`** can only be meaningfully tested against a live/staged api-football response + DB → integration/e2e territory, not unit.
-- **Middleware/session** spreads across every authed route → e2e is the natural guard (already covered by the Playwright suite).
+Incoming/outgoing counts below include local graph edges only.
 
-## Optional next step: real graph
+| Module                                           | Incoming | Outgoing | Classification                     | Evidence-backed caution                                       |
+| ------------------------------------------------ | -------: | -------: | ---------------------------------- | ------------------------------------------------------------- |
+| `src/types.ts`                                   |       29 |        1 | supporting, contract, load-bearing | DTO changes can cross UI, API and services                    |
+| `src/lib/utils.ts`                               |       19 |        0 | supporting, shallow, load-bearing  | Styling helper has wide fan-in but little behavior            |
+| `src/components/ui/button.tsx`                   |       13 |        1 | peripheral/supporting primitive    | High fan-in is reuse, not business depth                      |
+| `src/db/database.types.ts`                       |       10 |        0 | generated contract, load-bearing   | Schema regeneration can affect every typed layer              |
+| `src/lib/api/matches.api.ts`                     |        6 |        1 | supporting adapter                 | Shared by match/betting hooks and components                  |
+| `src/lib/utils/bet-utils.ts`                     |        5 |        1 | supporting domain-adjacent utility | Status/statistics behavior fans into my-bets UI               |
+| `src/lib/services/bet.service.ts`                |        3 |        2 | core, deep                         | Owns create/update/delete/history orchestration               |
+| `src/components/leaderboard/LeaderboardView.tsx` |        1 |       10 | UI composition, deep locally       | High outgoing coupling makes isolated UI tests mock-heavy     |
+| `src/components/my-bets/MyBetsView.tsx`          |        1 |        9 | UI composition, deep locally       | Composes hooks, types, filters and presentation               |
+| `src/components/matches/MatchesView.tsx`         |      0\* |        9 | UI entry/composition               | `0` is an Astro-parser blind spot; `index.astro:4` imports it |
 
-To confirm the no-cycles claim mechanically and render a focused SVG:
-```
-npx depcruise src --include-only "^src" --output-type dot | dot -T svg > context/map/structure.svg
-```
-Not run here — layering was clear enough from import analysis for a repo this size.
+`src/pages/api/**`, `src/middleware/index.ts` and
+`supabase/functions/sync-matches/index.ts` have no incoming static edges and are
+correctly interpreted as framework/runtime entry points, not dead code. The same
+applies to React roots imported only by `.astro` pages.
 
-## Limits
+## Boundary checks
 
-Static import view of `@/*` edges only. Does not capture runtime coupling via the database schema (which silently couples `sync-matches`, services, and the scoring function — see artifact 1's "common denominator" note).
+| Boundary                                                                  | Result                 | Evidence                                                        | What it does not prove                                               |
+| ------------------------------------------------------------------------- | ---------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| No import cycles                                                          | Pass                   | `no-circular`, 0 violations                                     | No runtime cycles through HTTP/DB/cron                               |
+| Components/API wrappers do not import server services or server DB client | Pass                   | `client-not-to-server`, 0 violations                            | Auth components intentionally use browser client                     |
+| Server routes/services/middleware do not import browser DB client         | Pass                   | `server-not-to-browser-db`, 0 violations                        | Correct cookie/session behavior at runtime                           |
+| Services do not depend on pages/components                                | Pass                   | `services-not-to-presentation`, 0 violations                    | Quality or transactionality of service logic                         |
+| API routes delegate to services                                           | 7 graph edges          | `pages/api → lib/services`                                      | Some routes, e.g. username check, may query directly                 |
+| Astro pages compose services/components                                   | Pass by lexical search | `index.astro:3-6`, `my-bets.astro:3-7`, `leaderboard.astro:3-6` | `.astro` edges are absent from graph metrics                         |
+| Edge and Node scoring share a module                                      | Pass                   | `scoring.service.ts:4`; `sync-matches/index.ts:17-19`           | Only the points constant is shared; orchestration remains duplicated |
+
+## API and runtime entry points
+
+| Route                                          | Methods     | Downstream            |
+| ---------------------------------------------- | ----------- | --------------------- |
+| `/api/admin/score-matches`                     | POST        | `scoring.service`     |
+| `/api/auth/check-username`                     | POST        | direct Supabase query |
+| `/api/bets`                                    | POST        | `bet.service`         |
+| `/api/bets/[id]`                               | PUT, DELETE | `bet.service`         |
+| `/api/matches`                                 | GET         | `matches.service`     |
+| `/api/me/bets`                                 | GET         | `bet.service`         |
+| `/api/tournaments`                             | GET         | `tournament.service`  |
+| `/api/tournaments/[tournament_id]/leaderboard` | GET         | `leaderboard.service` |
+
+Other runtime entry points are the Astro pages, `src/middleware/index.ts:5`, and the
+Supabase Edge Function. `MatchDetailDTO` documents a single-match endpoint
+(`src/types.ts:79-94`), but no `/api/matches/[id].ts` entry point exists.
+
+## Structural risks and testability
+
+1. **Scoring has duplicated orchestration across runtimes.** The shared constant is
+   real, but result comparison, SELECT-then-UPSERT accumulation and award-then-flag
+   sequencing remain duplicated (`scoring.service.ts:52-93,117-136` and
+   `sync-matches/index.ts:165-255`). Static coupling is one shared-rule edge;
+   database coupling is much wider.
+2. **Database schema is a hidden integration contract.** Node services, generated
+   types, RLS and the Deno function meet through tables rather than imports. A schema
+   change must be traced across migrations, `database.types.ts`, services and Edge.
+3. **Astro is a graph blind spot.** React roots appear as zero-incoming modules even
+   when pages import them. Do not use orphan metrics alone to delete code.
+4. **UI composition has high outgoing coupling.** `MatchesView`, `MyBetsView` and
+   `LeaderboardView` naturally pull hooks, adapters and primitives together; behavior
+   spanning those seams is better covered by integration/E2E tests than by extensive
+   mocking of every child.
+5. **Services remain relatively testable.** They receive `SupabaseClient` as an
+   argument/constructor and have small local outgoing graphs; deterministic scoring
+   and bet rules can be unit-tested, while RLS/transaction guarantees require a real DB.
+6. **The scoring admin endpoint is authentication-only.** It checks for a user but no
+   admin role (`src/pages/api/admin/score-matches.ts:11-23,50-52`). This is a security
+   risk discovered from code, not a dependency violation.
+
+## Unknowns
+
+- HTTP calls, Supabase queries, RLS policies, cron scheduling and external API payloads
+  are runtime edges outside the import graph.
+- No live/staging call was made, so deployment configuration and API-Football response
+  compatibility remain unverified.
+- The graph proves current direction of imports, not that the chosen layers are the
+  best domain boundaries.

@@ -784,16 +784,16 @@ usuwa alokację per wywołanie, co jest pomijalne.
 
 #### Automated
 
-- [ ] 1.1 Testy charakteryzujące handler przechodzą (npx vitest run supabase/functions)
-- [ ] 1.2 Cały zestaw i globalne progi pokrycia przechodzą (npm run test:coverage)
-- [ ] 1.3 Lint przechodzi (npm run lint)
-- [ ] 1.4 index.ts nietknięty względem HEAD (git diff HEAD --quiet)
-- [ ] 1.5 deno check index.ts przechodzi
+- [x] 1.1 Testy charakteryzujące handler przechodzą (npx vitest run supabase/functions)
+- [x] 1.2 Cały zestaw i globalne progi pokrycia przechodzą (npm run test:coverage)
+- [x] 1.3 Lint przechodzi (npm run lint)
+- [x] 1.4 index.ts nietknięty względem HEAD (git diff HEAD --quiet)
+- [x] 1.5 deno check index.ts przechodzi
 
 #### Manual
 
-- [ ] 1.6 Testy known-bug H7–H9 opisują defekt i wskazują opcję #2
-- [ ] 1.7 Mutacja kontrolna stałej punktów wywala H1–H3
+- [x] 1.6 Testy known-bug H7–H9 opisują defekt i wskazują opcję #2
+- [x] 1.7 Mutacja kontrolna stałej punktów wywala H1–H3
 
 ### Phase 2: Baseline wdrożenia (tylko odczyt)
 

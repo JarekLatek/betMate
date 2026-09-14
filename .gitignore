@@ -35,3 +35,6 @@ supabase/.env.local
 
 # Ignore local Claude configuration
 CLAUDE.local.md
+
+# Local 10xDevs course execution plans
+context/course/

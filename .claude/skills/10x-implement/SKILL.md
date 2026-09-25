@@ -48,8 +48,7 @@ When given a plan path:
 - Read the plan completely. The `## Progress` section at the bottom is authoritative for execution state — checkmarks (`- [x]`) live ONLY there. Phase blocks contain plain `- ` bullets (no checkboxes).
 - Read `context/foundation/lessons.md` if present and internalize each entry before starting any phase — these are the team's accepted recurring rules and must shape every implementation choice you make in this run.
 - Read all files mentioned in the plan (referenced research, frame, source files in the same change folder)
-- **Read files fully** - never use limit/offset parameters, you need complete context
-- Think deeply about how the pieces fit together
+- Read these files in full (no limit/offset) — the phases depend on details anywhere in them
 - **Update `change.md`**: on entry, set `status: implementing` (only if currently in `{planned, plan_reviewed}`) and `updated: <today>`.
 - Count total phases (from `## Phase N:` headers) and create one TaskCreate entry per phase (these appear in the user's status bar):
   - For each phase, create a task with `subject: "Phase N: [Phase Name]"` and `activeForm: "Implementing Phase N"`
@@ -71,7 +70,7 @@ When things don't match the plan exactly, think about why and communicate clearl
 
 If you encounter a mismatch:
 
-- STOP and think deeply about why the plan can't be followed
+- Stop and work out why the plan can't be followed
 - Present the issue clearly as text:
 
   ```

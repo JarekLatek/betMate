@@ -190,9 +190,9 @@ The "what's already in place" assessment shouldn't fall on the user — the code
 
 **Run all probes in one batched delegation when the host supports it.** Each prompt is short and self-contained; delegated agents return only a paragraph each, so the main context stays small. Example for Auth:
 
-> Inventory the auth/identity layer of this codebase. Report in under 100 words: (1) is there an auth provider integration? Name it. (2) Are there session/token issuing or verification code paths? Cite a file:line. (3) Is there route-level auth middleware? Cite. If a layer is absent, say "absent" — don't speculate. Don't suggest changes. Don't write or edit files.
+> Inventory the auth/identity layer of this codebase. Report in one short paragraph: (1) is there an auth provider integration? Name it. (2) Are there session/token issuing or verification code paths? Cite a file:line. (3) Is there route-level auth middleware? Cite. If a layer is absent, say "absent" — don't speculate. Don't suggest changes. Don't write or edit files.
 
-Adapt the same template per layer. Always require: present/absent/partial verdict, ≤ 100 words, file evidence when present, no speculation, no edits.
+Adapt the same template per layer. Always require: present/absent/partial verdict, one short paragraph, file evidence when present, no speculation, no edits.
 
 After all probes return, present a one-screen baseline summary to the user:
 

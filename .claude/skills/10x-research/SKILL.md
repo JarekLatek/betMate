@@ -33,12 +33,11 @@ Then wait for the user's research query.
 
 1. **Read any directly mentioned files first:**
    - If the user mentions specific files (tickets, docs, JSON), read them FULLY first (no limit/offset)
-   - **CRITICAL**: Read these files yourself in the main context before spawning any sub-tasks
+   - Read them yourself in the main context before spawning sub-tasks, so each sub-task prompt carries what they say
    - Read `context/foundation/lessons.md` if present and treat its entries as known-pattern priors when shaping the research areas — recurring rules already accepted by the team narrow what's worth re-investigating.
 
 2. **Analyze and decompose the research question:**
    - Break down the user's query into composable research areas
-   - Take time to ultrathink about the underlying patterns, connections, and architectural implications the user might be seeking
    - Identify specific components, patterns, or concepts to investigate
    - Create research tasks using TaskCreate to track each research area (these appear in the user's status bar). Update them via TaskUpdate as each area completes.
    - Consider which directories, files, or architectural patterns are relevant
@@ -99,7 +98,7 @@ Then wait for the user's research query.
    - Example: one Explore for "find all files related to X", another for "find prior decisions about Y in `context/changes/**/` and `context/archive/**/`", a general-purpose for "analyze how Z system works"
 
 5. **Wait for all sub-agents to complete and synthesize findings:**
-   - IMPORTANT: Wait for ALL sub-agent tasks to complete before proceeding
+   - Synthesize only after every sub-agent has returned; a partial set skews the findings
    - Compile results: prioritize live codebase findings, use `context/changes/**/` and `context/archive/**/` as supplementary historical context
    - Connect findings across components with specific file:line references
    - Answer the user's questions with concrete evidence and architectural patterns

@@ -46,7 +46,7 @@ The more upstream context you pass in, the fewer questions I'll ask:
 - Task + frame + research → minimum questions; I focus only on solution-design decisions that need your input
 
 Tip: invoke directly with a change-id or path — `/10x-plan oauth-login` or `/10x-plan @context/changes/oauth-login/frame.md`
-For deeper analysis, try: `/10x-plan think deeply about @context/changes/oauth-login/research.md`
+For deeper analysis, raise the session's effort level before invoking `/10x-plan`.
 ```
 
 Then wait for the user's input.
@@ -95,9 +95,7 @@ Before any reading, identify what kinds of upstream artifacts the user passed in
    - Related implementation plans
    - Any JSON/data files mentioned
    - `context/foundation/lessons.md` if present — treat its rules as priors when probing scope, edge cases, and architecture choices; rules already accepted by the team narrow which design pitfalls still need fresh questioning.
-   - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files
-   - **CRITICAL**: DO NOT spawn sub-tasks before reading these files yourself in the main context
-   - **NEVER** read files partially - if a file is mentioned, read it completely
+   - Read each mentioned file in full (no limit/offset), yourself, before spawning sub-tasks — the questions and sub-task prompts depend on what they say
 
 2. **Spawn initial research tasks to gather context** (skip or narrow based on Step 1.0):
    Before asking the user any questions, use the Task tool with parallel sub-agents to research:
@@ -277,7 +275,7 @@ Before any reading, identify what kinds of upstream artifacts the user passed in
    - Questions with obvious answers given the context already provided
    - Preferences that don't affect the plan's structure or success
 
-   **CRITICAL**: You MUST ask the number of questions appropriate to the confirmed complexity level *and* the upstream-artifacts scaling from Step 1.0. Do not shortcut this when no upstream artifacts were provided — thorough questioning prevents costly rework. Equally, do not pad questions when a frame or research already covers the ground — re-asking erodes trust in the upstream artifact. Each question should force a real decision, not confirm something obvious.
+   Ask the number of questions appropriate to the confirmed complexity level *and* the upstream-artifacts scaling from Step 1.0. Do not shortcut this when no upstream artifacts were provided — thorough questioning prevents costly rework. Equally, do not pad questions when a frame or research already covers the ground — re-asking erodes trust in the upstream artifact. Each question should force a real decision, not confirm something obvious.
 
 ### Step 2: Research & Discovery
 
@@ -301,8 +299,7 @@ After getting initial clarifications from the user, NOW is when you address the 
    **This is NOT for users to decide** — you determine this by researching existing patterns, files, and context.
 
 2. **If the user corrects any misunderstanding**:
-   - DO NOT just accept the correction
-   - Spawn new research tasks to verify the correct information
+   - Verify the correction before building on it: spawn research tasks to check it
    - Read the specific files/directories they mention
    - Only proceed once you've verified the facts yourself
 
@@ -678,7 +675,6 @@ For non-software: structure, workflow, key dependencies.]
    - Work collaboratively
 
 3. **Be Thorough**:
-   - Read all context files COMPLETELY before planning
    - Research patterns using parallel sub-tasks (codebase for software, context files and prior work for non-software)
    - Include specific references (file:line for code, document paths for content)
    - Write measurable success criteria with clear automated vs manual distinction
@@ -694,13 +690,12 @@ For non-software: structure, workflow, key dependencies.]
    - Tasks appear in the user's status bar for visibility
    - Mark tasks completed as you finish research areas
 
-6. **MANDATORY: Complexity-Scaled Deep Questioning via AskUserQuestion**:
-   - **BEFORE** writing any plan, you MUST assess complexity (HIGH/MEDIUM/LOW) and get user confirmation
-   - Ask the full number of questions matching complexity: LOW=4-6, MEDIUM=7-10, HIGH=11-15
+6. **Complexity-Scaled Questioning via AskUserQuestion**:
+   - Before writing any plan, assess complexity (HIGH/MEDIUM/LOW) and get user confirmation
+   - Ask the number of questions matching complexity (LOW=4-6, MEDIUM=7-10, HIGH=11-15), scaled down by the upstream artifacts per Step 1.0
    - Every option must include a `⭐ Recommended` pick with strength/tradeoff analysis
    - Cover scope, edge cases, architecture, data model, testing, and performance as relevant to complexity
    - Ask in rounds of 1-4 questions — as many rounds as needed to hit the target count
-   - DO NOT skip or shorten this step — thorough questioning prevents critical bugs and rework
    - Wait for user answers before proceeding to detailed planning
 
 7. **No Open Questions in Final Plan**:

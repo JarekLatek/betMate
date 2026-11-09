@@ -41,3 +41,7 @@ CLAUDE.local.md
 
 # Local 10xDevs course execution plans
 context/course/
+
+# dotenvx private keys
+.env.keys
+supabase/.env.keys

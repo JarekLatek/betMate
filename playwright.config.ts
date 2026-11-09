@@ -1,9 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
-import dotenv from "dotenv";
+import { config } from "@dotenvx/dotenvx";
 import path from "path";
 
-// Załaduj zmienne środowiskowe z .env.test
-dotenv.config({ path: path.resolve(process.cwd(), ".env.test") });
+// Załaduj (i odszyfruj kluczem z .env.keys) zmienne środowiskowe z .env.test.
+// W CI .env.test jest tworzony jawnym tekstem z sekretów GitHuba — też działa.
+config({ path: path.resolve(process.cwd(), ".env.test"), quiet: true });
 
 export default defineConfig({
   testDir: "./tests/e2e",

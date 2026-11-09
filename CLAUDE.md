@@ -28,11 +28,21 @@ npm run lint             # Run ESLint
 npm run lint:fix         # Fix ESLint issues automatically
 npm run format           # Format code with Prettier
 
+# Edge Functions (local)
+npm run functions:serve  # supabase functions serve with decrypted supabase/.env.local
+
 # Pre-commit hooks
 # Husky + lint-staged automatically run on commit:
 # - ESLint fix for .ts, .tsx, .astro files
 # - Prettier format for .json, .css, .md files
 ```
+
+## Environment Variables (dotenvx)
+
+- `.env.local`, `.env.test` and `supabase/.env.local` are encrypted with dotenvx (values look like `encrypted:...`).
+- Private keys: `.env.keys` (root files) and `supabase/.env.keys` (separate, because both `.env.local` files would share the `DOTENV_PRIVATE_KEY_LOCAL` name). Both are gitignored and excluded from Synology Drive sync — never commit or print them.
+- npm scripts (`dev`, `dev:e2e`, `build`, `preview`) run through `dotenvx run`; `playwright.config.ts` loads `.env.test` via `@dotenvx/dotenvx` `config()`. Plaintext files (e.g. CI's generated `.env.test`) still work.
+- Edit a value: `npx dotenvx set KEY value -f .env.local` (encrypts automatically). Read: `npx dotenvx get KEY -f .env.local`.
 
 ## Project Structure
 

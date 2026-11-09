@@ -3,10 +3,11 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "dev:e2e": "node --env-file=.env.test ./node_modules/astro/astro.js dev --mode test",
-    "build": "astro build",
-    "preview": "astro preview",
+    "dev": "dotenvx run -f .env.local -- astro dev",
+    "dev:e2e": "dotenvx run -f .env.test -- astro dev --mode test",
+    "build": "dotenvx run -f .env.local -- astro build",
+    "preview": "dotenvx run -f .env.local -- astro preview",
+    "functions:serve": "bash -c 'supabase functions serve --env-file <(dotenvx decrypt -f supabase/.env.local -fk supabase/.env.keys --stdout)'",
     "astro": "astro",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -50,6 +51,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@dotenvx/dotenvx": "^2.38.2",
     "@eslint/compat": "1.2.7",
     "@eslint/js": "9.23.0",
     "@playwright/test": "^1.57.0",
